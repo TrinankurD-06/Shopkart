@@ -1,0 +1,26 @@
+{
+  "name": "shopkart-backend",
+  "version": "1.0.0",
+  "description": "ShopKart REST API - Node.js, Express, MongoDB, JWT (HttpOnly cookie) and Razorpay Test Mode",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "seed": "node seed/seed.js",
+    "seed:fresh": "node seed/seed.js --fresh"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.9.5",
+    "razorpay": "^2.9.5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
