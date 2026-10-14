@@ -1,0 +1,173 @@
+const img = (id) => `https://images.unsplash.com/photo-${id}?w=800&q=80&auto=format&fit=crop`;
+
+const products = [
+  // Electronics
+  {
+    name: "Wireless Over-Ear Headphones",
+    description: "Foldable Bluetooth headphones with soft cushions, 30-hour battery life and a built-in mic for calls.",
+    price: 3499,
+    category: "Electronics",
+    image: img("1505740420928-5e560c06d30e"),
+    stock: 25,
+  },
+  {
+    name: "Smartphone 128GB",
+    description: "6.5-inch display, dual camera and all-day battery. Comes with a fast charger in the box.",
+    price: 18999,
+    category: "Electronics",
+    image: img("1511707171634-5f897ff02aa9"),
+    stock: 12,
+  },
+  {
+    name: "Slim Wireless Keyboard",
+    description: "Low-profile rechargeable keyboard with quiet keys. Pairs with up to three devices.",
+    price: 2299,
+    category: "Electronics",
+    image: img("1587829741301-dc798b83add3"),
+    stock: 18,
+  },
+  {
+    name: "Ergonomic Wireless Mouse",
+    description: "Comfortable contoured mouse with adjustable DPI and a tiny USB receiver.",
+    price: 899,
+    category: "Electronics",
+    image: img("1527864550417-7fd91fc51a46"),
+    stock: 40,
+  },
+  {
+    name: "Portable Bluetooth Speaker",
+    description: "Water-resistant speaker with deep bass and 12 hours of playtime. Great for hostel rooms and trips.",
+    price: 2799,
+    category: "Electronics",
+    image: img("1608043152269-423dbba4e7e1"),
+    stock: 4,
+  },
+  {
+    name: "Fitness Smartwatch",
+    description: "Tracks steps, heart rate and sleep. Shows notifications from your phone.",
+    price: 4999,
+    category: "Electronics",
+    image: img("1546868871-7041f2a55e12"),
+    stock: 9,
+  },
+  {
+    name: "Instant Film Camera",
+    description: "Point-and-shoot instant camera that prints photos in seconds. Retro look, simple controls.",
+    price: 6499,
+    category: "Electronics",
+    image: img("1526170375885-4d8ecf77b99f"),
+    stock: 0,
+  },
+
+  // Fashion
+  {
+    name: "Red Running Shoes",
+    description: "Lightweight knit running shoes with a cushioned sole for daily jogs.",
+    price: 2999,
+    category: "Fashion",
+    image: img("1542291026-7eec264c27ff"),
+    stock: 15,
+  },
+  {
+    name: "Classic White T-Shirt",
+    description: "Soft 100% cotton crew-neck tee. A wardrobe basic that goes with everything.",
+    price: 499,
+    category: "Fashion",
+    image: img("1521572163474-6864f9cf17ab"),
+    stock: 60,
+  },
+  {
+    name: "Grey Pullover Hoodie",
+    description: "Warm fleece-lined hoodie with a kangaroo pocket. Perfect for winter mornings.",
+    price: 1299,
+    category: "Fashion",
+    image: img("1556821840-3a63f95609a7"),
+    stock: 22,
+  },
+  {
+    name: "Black Wayfarer Sunglasses",
+    description: "UV-protected sunglasses with a classic wayfarer frame.",
+    price: 799,
+    category: "Fashion",
+    image: img("1572635196237-14b3f281503f"),
+    stock: 30,
+  },
+  {
+    name: "Navy Everyday Backpack",
+    description: "Water-resistant backpack with a padded 15-inch laptop sleeve and two side pockets.",
+    price: 1599,
+    category: "Fashion",
+    image: img("1553062407-98eeb64c6a62"),
+    stock: 3,
+  },
+  {
+    name: "Minimal Analog Watch",
+    description: "Clean white dial with a silicone strap. Simple, light and water-resistant.",
+    price: 1899,
+    category: "Fashion",
+    image: img("1523275335684-37898b6baf30"),
+    stock: 14,
+  },
+
+  // Books
+  {
+    name: "Milk and Honey",
+    description: "A best-selling collection of poetry and prose by Rupi Kaur.",
+    price: 299,
+    category: "Books",
+    image: img("1544947950-fa07a98d237f"),
+    stock: 35,
+  },
+  {
+    name: "How Innovation Works",
+    description: "Matt Ridley explains how new ideas really come about, through stories of inventions big and small.",
+    price: 449,
+    category: "Books",
+    image: img("1589829085413-56de8ae18c73"),
+    stock: 20,
+  },
+  {
+    name: "Startup Reading Bundle (5 Books)",
+    description: "A stack of five popular books on startups, product thinking and building companies.",
+    price: 1999,
+    category: "Books",
+    image: img("1512820790803-83ca734da794"),
+    stock: 7,
+  },
+  {
+    name: "Short Stories Collection",
+    description: "Twenty short stories from different authors - easy reading for the commute.",
+    price: 349,
+    category: "Books",
+    image: img("1543002588-bfa74002ed7e"),
+    stock: 2,
+  },
+
+  // Home
+  {
+    name: "Adjustable Desk Lamp",
+    description: "Metal desk lamp with an adjustable arm. Works with any standard LED bulb.",
+    price: 1199,
+    category: "Home",
+    image: img("1507473885765-e6ed057f782c"),
+    stock: 16,
+  },
+  {
+    name: "White Ceramic Mug",
+    description: "350 ml glossy ceramic mug. Microwave and dishwasher safe.",
+    price: 249,
+    category: "Home",
+    image: img("1514228742587-6b1558fcca3d"),
+    stock: 50,
+  },
+  {
+    name: "Wooden Bar Stool",
+    description: "Sturdy painted wood stool with a footrest. Works in kitchens and study corners.",
+    price: 2499,
+    category: "Home",
+    image: img("1503602642458-232111445657"),
+    stock: 6,
+  },
+];
+
+export default products;
