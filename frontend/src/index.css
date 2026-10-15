@@ -2863,6 +2863,39 @@ fieldset {
   color: var(--ink);
 }
 
+.google-btn {
+  gap: 12px;
+  background: var(--card);
+  font-weight: 500;
+}
+
+.or-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 20px 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.or-divider::before,
+.or-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .demo-note {
   margin-top: 26px;
   padding: 14px 16px;

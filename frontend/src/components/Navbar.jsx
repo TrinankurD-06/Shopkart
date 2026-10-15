@@ -5,8 +5,9 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { useAddresses } from "../context/AddressContext.jsx";
 import { fetchWishlist } from "../services/api.js";
-import { firstName, initials } from "../utils/format.js";
+import { firstName } from "../utils/format.js";
 import Brand from "./Brand.jsx";
+import Avatar from "./Avatar.jsx";
 
 const ANNOUNCEMENTS = [
   "Free delivery on every order",
@@ -80,7 +81,7 @@ function UserMenu({ user, onLogout, loggingOut }) {
         aria-label="Account menu"
         onClick={() => setOpen((value) => !value)}
       >
-        <span className="avatar">{initials(user.fullName)}</span>
+        <Avatar user={user} />
       </button>
 
       {open && (

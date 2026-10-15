@@ -5,6 +5,7 @@ import { getErrorMessage, registerCustomer } from "../services/api.js";
 import { validateRegister } from "../utils/validation.js";
 import PasswordInput from "../components/PasswordInput.jsx";
 import AuthAside from "../components/AuthAside.jsx";
+import GoogleButton from "../components/GoogleButton.jsx";
 
 const EMPTY_FORM = { fullName: "", email: "", password: "", phone: "" };
 
@@ -70,6 +71,8 @@ function Register() {
             <AlertCircle size={16} /> {serverError}
           </div>
         )}
+
+        <GoogleButton label="Sign up with Google" />
 
         <form onSubmit={handleSubmit} noValidate>
           <div className="field">

@@ -7,7 +7,7 @@ A full-stack MERN e-commerce app built for Engineering Labs 01–06 ([problem st
 | Account | Email | Password | What you can do |
 |---------|-------|----------|-----------------|
 | **Admin** (placeholder) | `admin@shopkart.dev` | `Admin@123` | Analytics, all orders, update order status, inventory and stock |
-| **Customer** | Register your own | 6+ characters | Shop, save addresses, pay in Test Mode, track orders |
+| **Customer** | Register your own, or **Continue with Google** | 6+ characters | Shop, save addresses, pay in Test Mode, track orders |
 
 > The login page has a **"Fill in"** button for the admin account. Admins land on the admin panel. Their store header shows only **Home** and **Admin**, with no bag, wishlist or orders, because admins don't shop.
 
@@ -28,7 +28,7 @@ A full-stack MERN e-commerce app built for Engineering Labs 01–06 ([problem st
 
 ### As a customer
 
-1. Open **https://shopkart-sooty.vercel.app** and **register**. Every page except Login and Register requires sign-in.
+1. Open **https://shopkart-sooty.vercel.app** and **register**, or click **Continue with Google**. Every page except Login and Register requires sign-in.
    - Use a password of **at least 6 characters**.
    - Use a **10-digit Indian mobile number starting with 6–9**, e.g. `9876543210`.
 2. **Home** shows bestsellers, category tiles and, once you have some, your wishlist and bag.
@@ -81,6 +81,10 @@ Other test methods also work. The UPI ID `success@razorpay` succeeds and `failur
 - **Admin routes are protected on the server**, not just hidden in the UI. Every `/api/admin/*` call checks for `role: "admin"` and returns 403 otherwise.
 - **The admin credentials are public placeholders** so evaluators can try the panel. For a real store, set `ADMIN_EMAIL` and `ADMIN_PASSWORD` and re-run `npm run seed:admin`.
 - **Login uses an HttpOnly cookie.** The JWT is never visible to JavaScript or stored in `localStorage`.
+- **Google sign-in (OAuth 2.0)** uses the authorization-code flow with `state` and PKCE, run entirely on the server.
+  - Google's tokens never reach the browser. After Google confirms the account, the server sets the same ShopKart session cookie as a password login.
+  - A Google account with the same verified email as an existing account is linked to it.
+  - New Google accounts have no password or phone. They can set a password later under **Account**, and the phone is collected with the delivery address.
 - **The server is the source of truth for money.** Checkout sends only the shipping address.
   - The server recalculates the total from the database and re-checks stock.
   - It verifies Razorpay's HMAC-SHA256 signature before marking the order paid, reducing stock and clearing the bag.
@@ -169,6 +173,15 @@ cp .env.example .env    # then fill in the values below
 | `RAZORPAY_KEY_ID` | Your **test** Key ID (`rzp_test_...`) |
 | `RAZORPAY_KEY_SECRET` | Your **test** Key Secret. It stays on the backend only. |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Optional. Override the placeholder admin created by `npm run seed:admin`. |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional. Enable **Continue with Google**. The button is hidden until both are set. |
+| `APP_URL` | Optional. Public URL of the site, used to build the Google redirect URI. Normally worked out from the request. |
+
+**Setting up Google sign-in:**
+1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), create an **OAuth client ID** of type **Web application**.
+2. Add these **Authorised redirect URIs**:
+   - `http://localhost:5180/api/auth/google/callback` for local development
+   - `https://shopkart-sooty.vercel.app/api/auth/google/callback` for production
+3. Put the client ID and secret in `backend/.env` locally, and in the Vercel project's environment variables for production.
 
 **Getting Razorpay test keys:** log in to the Razorpay Dashboard, switch to **Test Mode**, open **Account & Settings → API Keys**, then click **Generate Key**. Paste both values into `backend/.env`.
 
@@ -212,7 +225,7 @@ Open **http://localhost:5180**. The frontend calls `/api` on its own origin, and
 | `/api`, `/api/*` | `backend` | The Express app, run as a Vercel Function. The full path, including `/api`, is passed through. |
 | everything else | `frontend` | The Vite build. Unknown paths fall back to `index.html` so client-side routes work on refresh. |
 
-- **Production environment variables:** set in Vercel project settings: `MONGO_URI`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `NODE_ENV=production`.
+- **Production environment variables:** set in Vercel project settings: `MONGO_URI`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `NODE_ENV=production`, plus `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` for Google sign-in.
 - **Seeding production:** the seed scripts run from your machine against the same `MONGO_URI`, e.g. `npm run seed:admin`.
 - **Automatic deploys:** every push to `main` deploys to production through the connected GitHub repo.
 - **Atlas Network Access:** must allow `0.0.0.0/0`, because Vercel Functions don't use fixed IPs.
@@ -228,11 +241,11 @@ Open **http://localhost:5180**. The frontend calls `/api` on its own origin, and
 vercel.json          Vercel services + routing
 backend/
 ├── config/          db.js (cached Mongo connection), razorpay.js
-├── controllers/     customer, address, product, wishlist, cart, order, admin
+├── controllers/     customer, address, oauth (Google), product, wishlist, cart, order, admin
 ├── middlewares/     auth.middleware.js (protect + adminOnly), error.middleware.js
 ├── models/          customer.model.js (+ role, addresses, wishlist, cart),
 │                    product.model.js (+ sold), order.model.js (+ statusHistory)
-├── routes/          customer, product, wishlist, cart, order, admin  (all under /api)
+├── routes/          auth, customer, product, wishlist, cart, order, admin  (all under /api)
 ├── seed/            products.js, seed.js (seed / fresh / sync-stock), admin.js
 ├── utils/           generateToken.js, validators.js
 └── index.js         Express app (exported for Vercel, listens locally)
@@ -272,7 +285,14 @@ frontend/src/
 | POST | `/api/customers/login` | Sets the HttpOnly cookie. Returns 401 "Invalid email or password" without saying which one was wrong. |
 | GET | `/api/customers/me` 🔒 | Current customer (including `role`), without the password |
 | POST | `/api/customers/logout` 🔒 | Clears the cookie |
-| PATCH | `/api/customers/change-password` 🔒 | `{oldPassword, newPassword}` (bonus) |
+| PATCH | `/api/customers/change-password` 🔒 | `{oldPassword, newPassword}` (bonus). Google accounts without a password can set one with just `{newPassword}`. |
+
+### Sign in with Google (OAuth 2.0)
+| Method | Endpoint | Notes |
+|---|---|---|
+| GET | `/api/auth/providers` | `{google: true/false}`. Whether Google sign-in is configured. |
+| GET | `/api/auth/google?next=/path` | Redirects to Google's consent screen. Sets a 10-minute HttpOnly cookie holding `state` and the PKCE verifier. |
+| GET | `/api/auth/google/callback` | Google redirects here. The server checks `state`, exchanges the code with the client secret and PKCE verifier, reads the verified email, finds, links or creates the customer, sets the session cookie, then redirects to `/home`, `/admin` or `next`. Errors redirect to `/login?oauth_error=…`. |
 
 ### Address book, all 🔒
 | Method | Endpoint | Notes |

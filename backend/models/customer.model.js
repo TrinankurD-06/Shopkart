@@ -47,15 +47,36 @@ const customerSchema = new mongoose.Schema(
       trim: true,
     },
     // Always a bcrypt hash. select: false keeps it out of every query unless asked for.
+    // Accounts created with Google have no password until they set one.
     password: {
       type: String,
-      required: [true, "Password is required"],
+      required: [
+        function () {
+          return !this.googleId;
+        },
+        "Password is required",
+      ],
       select: false,
     },
+    // Google doesn't share a phone number, so it is optional for Google accounts
     phone: {
       type: String,
-      required: [true, "Phone number is required"],
+      required: [
+        function () {
+          return !this.googleId;
+        },
+        "Phone number is required",
+      ],
       trim: true,
+    },
+    // Google's stable account id ("sub"), set when the customer signs in with Google
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    avatarUrl: {
+      type: String,
     },
     // Admins manage stock and orders from the admin panel
     role: {

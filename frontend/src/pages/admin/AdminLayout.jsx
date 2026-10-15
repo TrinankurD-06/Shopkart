@@ -2,9 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { BarChart3, Boxes, ExternalLink, LogOut, Menu, PackageOpen, X } from "lucide-react";
 import Brand from "../../components/Brand.jsx";
+import Avatar from "../../components/Avatar.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { fetchAdminOrders, fetchInventory } from "../../services/api.js";
-import { initials } from "../../utils/format.js";
 
 // Separate shell for /admin: dark sidebar, no store navbar
 function AdminLayout() {
@@ -74,7 +74,7 @@ function AdminLayout() {
             <LogOut size={16} /> Log out
           </button>
           <div className="admin-user">
-            <span className="avatar">{initials(user.fullName)}</span>
+            <Avatar user={user} />
             <span>
               <strong>{user.fullName}</strong>
               <span style={{ opacity: 0.7 }}>{user.email}</span>

@@ -1,10 +1,21 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { AlertCircle, CheckCircle2, KeyRound } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { getErrorMessage, loginCustomer } from "../services/api.js";
 import PasswordInput from "../components/PasswordInput.jsx";
+import GoogleButton from "../components/GoogleButton.jsx";
 import AuthAside from "../components/AuthAside.jsx";
+
+// Shown when Google sign-in sends the browser back with ?oauth_error=...
+const OAUTH_ERRORS = {
+  cancelled: "Google sign-in was cancelled.",
+  expired: "Google sign-in took too long. Please try again.",
+  invalid_state: "That Google sign-in link was invalid or already used. Please try again.",
+  email_unverified: "Your Google account's email isn't verified, so we can't use it to sign in.",
+  google_failed: "We couldn't reach Google just now. Please try again.",
+  not_configured: "Google sign-in isn't set up on this server yet.",
+};
 
 // Placeholder admin created by `npm run seed:admin` - also listed in the README
 const DEMO_ADMIN = { email: "admin@shopkart.dev", password: "Admin@123" };
@@ -14,9 +25,11 @@ function Login() {
   const location = useLocation();
   const { refreshUser } = useAuth();
 
+  const [params] = useSearchParams();
   const registeredEmail = location.state?.registeredEmail || "";
+  const oauthError = OAUTH_ERRORS[params.get("oauth_error")] || (params.get("oauth_error") ? "Google sign-in failed. Please try again." : "");
   const [form, setForm] = useState({ email: registeredEmail, password: "" });
-  const [error, setError] = useState("");
+  const [error, setError] = useState(oauthError);
   const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (event) => {
@@ -63,6 +76,8 @@ function Login() {
             <AlertCircle size={16} /> {error}
           </div>
         )}
+
+        <GoogleButton next={location.state?.from} />
 
         <form onSubmit={handleSubmit} noValidate>
           <div className="field">

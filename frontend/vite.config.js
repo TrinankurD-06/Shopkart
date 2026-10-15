@@ -8,7 +8,11 @@ export default defineConfig({
     strictPort: true,
     // Mirrors the Vercel /api rewrite when running `npm run dev` on its own
     proxy: {
-      "/api": "http://localhost:5050",
+      "/api": {
+        target: "http://localhost:5050",
+        // keep Host as localhost:5180 so OAuth redirect URLs point back at this dev server
+        changeOrigin: false,
+      },
     },
   },
 });

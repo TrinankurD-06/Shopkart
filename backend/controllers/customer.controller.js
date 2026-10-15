@@ -14,6 +14,8 @@ const toPublicCustomer = (customer) => ({
   email: customer.email,
   phone: customer.phone,
   role: customer.role || "customer",
+  avatarUrl: customer.avatarUrl,
+  signInMethods: customer.googleId ? ["google"] : ["password"],
   createdAt: customer.createdAt,
 });
 
@@ -62,7 +64,7 @@ export const loginCustomer = async (req, res) => {
   }
 
   const customer = await Customer.findOne({ email }).select("+password");
-  const passwordMatches = customer ? await bcrypt.compare(password, customer.password) : false;
+  const passwordMatches = customer?.password ? await bcrypt.compare(password, customer.password) : false;
 
   // Same message for both cases so we don't reveal which one was wrong
   if (!passwordMatches) {
@@ -80,7 +82,9 @@ export const loginCustomer = async (req, res) => {
 
 // GET /customers/me  (protected)
 export const getMyProfile = async (req, res) => {
-  res.json(toPublicCustomer(req.user));
+  // A Google account may or may not have set a password as well
+  const hasPassword = Boolean(await Customer.exists({ _id: req.user._id, password: { $exists: true } }));
+  res.json({ ...toPublicCustomer(req.user), hasPassword });
 };
 
 // POST /customers/logout  (protected)
@@ -90,28 +94,36 @@ export const logoutCustomer = async (req, res) => {
 };
 
 // PATCH /customers/change-password  (protected, bonus)
+// Google accounts without a password can set one; everyone else must give the old password.
 export const changePassword = async (req, res) => {
   const oldPassword = typeof req.body?.oldPassword === "string" ? req.body.oldPassword : "";
   const newPassword = typeof req.body?.newPassword === "string" ? req.body.newPassword : "";
 
-  if (!oldPassword || !newPassword) {
+  const customer = await Customer.findById(req.user._id).select("+password");
+  const settingFirstPassword = !customer.password;
+
+  if (!newPassword || (!settingFirstPassword && !oldPassword)) {
     return res.status(400).json({ success: false, message: "Old password and new password are required" });
   }
   if (newPassword.length < 6) {
     return res.status(400).json({ success: false, message: "New password must be at least 6 characters" });
   }
 
-  const customer = await Customer.findById(req.user._id).select("+password");
-  const oldMatches = await bcrypt.compare(oldPassword, customer.password);
-  if (!oldMatches) {
-    return res.status(401).json({ success: false, message: "Old password is incorrect" });
-  }
-  if (oldPassword === newPassword) {
-    return res.status(400).json({ success: false, message: "New password must be different from the old password" });
+  if (!settingFirstPassword) {
+    const oldMatches = await bcrypt.compare(oldPassword, customer.password);
+    if (!oldMatches) {
+      return res.status(401).json({ success: false, message: "Old password is incorrect" });
+    }
+    if (oldPassword === newPassword) {
+      return res.status(400).json({ success: false, message: "New password must be different from the old password" });
+    }
   }
 
   customer.password = await bcrypt.hash(newPassword, SALT_ROUNDS);
   await customer.save();
 
-  res.json({ success: true, message: "Password changed successfully" });
+  res.json({
+    success: true,
+    message: settingFirstPassword ? "Password set. You can now also log in with your email." : "Password changed successfully",
+  });
 };

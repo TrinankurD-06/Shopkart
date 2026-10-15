@@ -5,10 +5,11 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useAddresses } from "../context/AddressContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { changePassword, getErrorMessage } from "../services/api.js";
-import { formatDate, initials } from "../utils/format.js";
+import { formatDate } from "../utils/format.js";
 import AddressForm from "../components/AddressForm.jsx";
 import AddressText, { AddressLabel } from "../components/AddressText.jsx";
 import PasswordInput from "../components/PasswordInput.jsx";
+import Avatar from "../components/Avatar.jsx";
 
 const MAX_ADDRESSES = 6;
 
@@ -111,7 +112,7 @@ function AddressBook() {
   );
 }
 
-function ChangePasswordForm() {
+function ChangePasswordForm({ hasPassword, onPasswordSet }) {
   const [form, setForm] = useState({ oldPassword: "", newPassword: "", confirm: "" });
   const [status, setStatus] = useState({ type: "", text: "" });
   const [saving, setSaving] = useState(false);
@@ -123,8 +124,8 @@ function ChangePasswordForm() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!form.oldPassword || !form.newPassword) {
-      return setStatus({ type: "error", text: "Please fill in both passwords." });
+    if ((hasPassword && !form.oldPassword) || !form.newPassword) {
+      return setStatus({ type: "error", text: hasPassword ? "Please fill in both passwords." : "Please choose a password." });
     }
     if (form.newPassword.length < 6) {
       return setStatus({ type: "error", text: "New password must be at least 6 characters." });
@@ -138,6 +139,7 @@ function ChangePasswordForm() {
       const data = await changePassword({ oldPassword: form.oldPassword, newPassword: form.newPassword });
       setStatus({ type: "success", text: data.message });
       setForm({ oldPassword: "", newPassword: "", confirm: "" });
+      if (!hasPassword) onPasswordSet();
     } catch (error) {
       setStatus({ type: "error", text: getErrorMessage(error) });
     } finally {
@@ -148,7 +150,10 @@ function ChangePasswordForm() {
   return (
     <form className="panel" onSubmit={handleSubmit} noValidate>
       <div className="panel-head">
-        <h2 className="panel-title">Password</h2>
+        <div>
+          <h2 className="panel-title">{hasPassword ? "Password" : "Set a password"}</h2>
+          {!hasPassword && <p className="panel-sub">You sign in with Google. Add a password to also log in with your email.</p>}
+        </div>
       </div>
       {status.text && (
         <div className={`alert alert-${status.type}`}>
@@ -156,10 +161,12 @@ function ChangePasswordForm() {
         </div>
       )}
       <div className="form-grid">
-        <div className="field span-2">
-          <label htmlFor="oldPassword">Current password</label>
-          <PasswordInput id="oldPassword" name="oldPassword" value={form.oldPassword} onChange={handleChange} autoComplete="current-password" />
-        </div>
+        {hasPassword && (
+          <div className="field span-2">
+            <label htmlFor="oldPassword">Current password</label>
+            <PasswordInput id="oldPassword" name="oldPassword" value={form.oldPassword} onChange={handleChange} autoComplete="current-password" />
+          </div>
+        )}
         <div className="field">
           <label htmlFor="newPassword">New password</label>
           <PasswordInput id="newPassword" name="newPassword" value={form.newPassword} onChange={handleChange} autoComplete="new-password" />
@@ -170,7 +177,7 @@ function ChangePasswordForm() {
         </div>
       </div>
       <button type="submit" className="btn btn-outline" disabled={saving}>
-        {saving ? "Saving..." : "Update password"}
+        {saving ? "Saving..." : hasPassword ? "Update password" : "Set password"}
       </button>
     </form>
   );
@@ -195,7 +202,7 @@ function Account() {
 
       <div className="account-grid">
         <div className="panel profile-card sticky">
-          <div className="avatar">{initials(user.fullName)}</div>
+          <Avatar user={user} as="div" />
           <h2>{user.fullName}</h2>
           <p className="muted small" style={{ margin: 0 }}>
             {user.email}
@@ -203,7 +210,7 @@ function Account() {
           <dl className="kv">
             <div>
               <dt>Mobile</dt>
-              <dd className="mono">+91 {user.phone}</dd>
+              <dd className={user.phone ? "mono" : "muted"}>{user.phone ? `+91 ${user.phone}` : "Not added"}</dd>
             </div>
             {user.createdAt && (
               <div>
@@ -211,6 +218,10 @@ function Account() {
                 <dd>{formatDate(user.createdAt)}</dd>
               </div>
             )}
+            <div>
+              <dt>Sign-in</dt>
+              <dd>{user.signInMethods?.includes("google") ? (user.hasPassword ? "Google + password" : "Google") : "Email & password"}</dd>
+            </div>
             <div>
               <dt>Account type</dt>
               <dd>{user.role === "admin" ? "Store admin" : "Customer"}</dd>
@@ -232,7 +243,7 @@ function Account() {
 
         <div className="stack">
           <AddressBook />
-          <ChangePasswordForm />
+          <ChangePasswordForm hasPassword={user.hasPassword !== false} onPasswordSet={refreshUser} />
         </div>
       </div>
     </section>

@@ -10,6 +10,7 @@ import wishlistRoutes from "./routes/wishlist.routes.js";
 import cartRoutes from "./routes/cart.routes.js";
 import orderRoutes from "./routes/order.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
+import authRoutes from "./routes/auth.routes.js";
 import { notFound, errorHandler } from "./middlewares/error.middleware.js";
 
 if (!process.env.JWT_SECRET) {
@@ -18,6 +19,8 @@ if (!process.env.JWT_SECRET) {
 }
 
 const app = express();
+// Behind Vercel / the Vite proxy: trust X-Forwarded-* so req.protocol is "https" in production
+app.set("trust proxy", 1);
 const PORT = process.env.PORT || 5050;
 const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5180")
   .split(",")
@@ -51,6 +54,7 @@ api.use("/wishlist", wishlistRoutes);
 api.use("/cart", cartRoutes);
 api.use("/orders", orderRoutes);
 api.use("/admin", adminRoutes);
+api.use("/auth", authRoutes);
 
 app.use("/api", api);
 

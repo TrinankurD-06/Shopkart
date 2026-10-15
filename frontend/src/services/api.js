@@ -38,6 +38,9 @@ export const getMe = () => data(api.get("/customers/me"));
 export const logoutCustomer = () => data(api.post("/customers/logout"));
 export const changePassword = (passwords) => data(api.patch("/customers/change-password", passwords));
 
+// ---------- Sign in with Google (OAuth 2.0) ----------
+export const fetchAuthProviders = () => data(api.get("/auth/providers"));
+
 // ---------- Address book ----------
 export const fetchAddresses = () => data(api.get("/customers/addresses"));
 export const createAddress = (address) => data(api.post("/customers/addresses", address));
