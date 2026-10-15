@@ -27,21 +27,46 @@ app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json({ limit: "100kb" }));
 app.use(cookieParser());
 
-app.get("/", (req, res) => {
+// Every route lives under /api - the same public path Vercel routes to this service
+const api = express.Router();
+
+// Connect lazily so the same app works as a long-running server and as a Vercel function
+api.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+api.get("/", (req, res) => {
   res.json({ success: true, message: "ShopKart API is running" });
 });
 
-app.use("/customers", customerRoutes);
-app.use("/products", productRoutes);
-app.use("/wishlist", wishlistRoutes);
-app.use("/cart", cartRoutes);
-app.use("/orders", orderRoutes);
+api.use("/customers", customerRoutes);
+api.use("/products", productRoutes);
+api.use("/wishlist", wishlistRoutes);
+api.use("/cart", cartRoutes);
+api.use("/orders", orderRoutes);
+
+app.use("/api", api);
 
 app.use(notFound);
 app.use(errorHandler);
 
-connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`ShopKart API listening on http://localhost:${PORT}`);
-  });
-});
+// On Vercel the exported app is invoked per request; locally we start a server
+if (!process.env.VERCEL) {
+  connectDB()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`ShopKart API listening on http://localhost:${PORT}/api`);
+      });
+    })
+    .catch((error) => {
+      console.error("MongoDB connection failed:", error.message);
+      process.exit(1);
+    });
+}
+
+export default app;

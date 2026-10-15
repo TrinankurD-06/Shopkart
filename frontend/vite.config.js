@@ -6,5 +6,9 @@ export default defineConfig({
   server: {
     port: 5180,
     strictPort: true,
+    // Mirrors the Vercel /api rewrite when running `npm run dev` on its own
+    proxy: {
+      "/api": "http://localhost:5050",
+    },
   },
 });

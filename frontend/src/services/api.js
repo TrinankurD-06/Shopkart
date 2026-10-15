@@ -1,6 +1,7 @@
 import axios from "axios";
 
-export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5050";
+// Same-origin by default: Vercel routes /api to the backend, and the Vite dev server proxies it
+export const API_URL = import.meta.env.VITE_API_URL || "/api";
 
 // withCredentials: true makes the browser send (and accept) the HttpOnly auth cookie
 const api = axios.create({

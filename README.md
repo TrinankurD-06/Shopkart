@@ -68,13 +68,15 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:5180**. The frontend reads the API URL from `frontend/.env`:
+Open **http://localhost:5180**. The frontend calls the API at `/api` on its own origin, and the Vite dev server proxies `/api` to `http://localhost:5050`. All API routes are served under `/api` (e.g. `/api/products`).
 
 | Variable | Default |
 |----------|---------|
-| `VITE_API_URL` | `http://localhost:5050` |
+| `VITE_API_URL` | `/api` (optional override, e.g. `http://localhost:5050/api`) |
 
-> Open the app at `localhost` and not `127.0.0.1`, so the browser treats the frontend and the API as the same site and sends the auth cookie.
+### Deploying to Vercel
+
+`vercel.json` deploys both apps as one Vercel project with two services: `/api/*` goes to the Express `backend`, and everything else goes to the Vite `frontend`. Set the backend variables (`MONGO_URI` pointing at Atlas, `JWT_SECRET`, `RAZORPAY_*`, `NODE_ENV=production`) in the Vercel project settings. Run `vercel dev` from the repo root to run both services together locally.
 
 ---
 
