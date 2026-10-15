@@ -1,52 +1,69 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { Heart } from "lucide-react";
 import { toggleWishlist } from "../services/api.js";
+import { useToast } from "../context/ToastContext.jsx";
 
-// Single toggle button used on product cards and the product details page.
-// States: default -> saving -> added/remove, with a visible error on failure.
-function WishlistButton({ productId, saved, onChange }) {
+// One toggle used in two shapes: a round heart on product cards ("icon")
+// and a square outline button beside "Add to bag" on the product page ("button").
+function WishlistButton({ productId, productName, saved, onChange, variant = "icon" }) {
+  const toast = useToast();
   const [saving, setSaving] = useState(false);
-  const [justAdded, setJustAdded] = useState(false);
-  const [error, setError] = useState("");
+  const [pop, setPop] = useState(false);
 
-  useEffect(() => {
-    if (!justAdded) return undefined;
-    const timer = setTimeout(() => setJustAdded(false), 1500);
-    return () => clearTimeout(timer);
-  }, [justAdded]);
-
-  const handleClick = async () => {
+  const handleClick = async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
     if (saving) return; // prevent duplicate requests
+
     setSaving(true);
-    setError("");
     try {
       const data = await toggleWishlist(productId);
-      onChange(productId, data.saved);
-      setJustAdded(data.saved);
+      onChange?.(productId, data.saved);
       window.dispatchEvent(new Event("wishlist:changed"));
+      if (data.saved) {
+        setPop(true);
+        setTimeout(() => setPop(false), 400);
+        toast({ text: `Saved ${productName ? `“${productName}”` : "item"} to your wishlist`, action: { label: "View", to: "/wishlist" } });
+      } else {
+        toast({ text: "Removed from your wishlist" });
+      }
     } catch {
-      setError("Unable to save product. Please try again.");
+      toast({ text: "Unable to update your wishlist. Please try again.", tone: "error" });
     } finally {
       setSaving(false);
     }
   };
 
-  let label = "♡ Add to Wishlist";
-  if (saving) label = "⏳ Saving...";
-  else if (justAdded) label = "♥ Added to Wishlist";
-  else if (saved) label = "♥ Remove from Wishlist";
+  const label = saved ? "Remove from wishlist" : "Save to wishlist";
 
-  return (
-    <div className="wishlist-action">
+  if (variant === "button") {
+    return (
       <button
         type="button"
-        className={`btn btn-small btn-wish ${saved ? "is-saved" : ""}`}
+        className={`btn btn-outline btn-lg ${saved ? "on" : ""}`}
         onClick={handleClick}
         disabled={saving}
+        aria-pressed={saved}
+        aria-label={label}
+        title={label}
       >
-        {label}
+        <Heart size={20} strokeWidth={1.8} />
       </button>
-      {error && <p className="field-error">{error}</p>}
-    </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className={`heart-btn ${saved ? "on" : ""} ${pop ? "pop" : ""}`}
+      onClick={handleClick}
+      disabled={saving}
+      aria-pressed={saved}
+      aria-label={label}
+      title={label}
+    >
+      <Heart size={17} strokeWidth={1.9} />
+    </button>
   );
 }
 

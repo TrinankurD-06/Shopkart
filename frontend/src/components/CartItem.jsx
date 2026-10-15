@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Minus, Plus } from "lucide-react";
 import { useCart } from "../context/CartContext.jsx";
-import { formatPrice, handleImageError } from "../utils/format.js";
+import { LOW_STOCK_FROM, formatPrice, handleImageError } from "../utils/format.js";
 
 function CartItem({ item }) {
   const { updateQuantity, removeFromCart, isPending } = useCart();
@@ -17,53 +18,63 @@ function CartItem({ item }) {
   };
 
   return (
-    <div className="cart-item">
-      <Link to={`/products/${product._id}`} className="cart-item-image">
+    <div className="line-item" style={pending ? { opacity: 0.6 } : undefined}>
+      <Link to={`/products/${product._id}`} className="line-thumb">
         <img src={product.image} alt={product.name} onError={handleImageError} />
       </Link>
 
-      <div className="cart-item-info">
-        <Link to={`/products/${product._id}`} className="cart-item-name">
+      <div>
+        <span className="tag">{product.category}</span>
+        <Link to={`/products/${product._id}`} className="line-name">
           {product.name}
         </Link>
-        <p className="muted">{formatPrice(product.price)} each</p>
+        <span className="muted small mono">{formatPrice(product.price)} each</span>
 
-        <div className="qty-row">
-          <div className="qty-control" aria-busy={pending}>
+        <div className="line-controls">
+          <div className="stepper" aria-busy={pending}>
             <button
               type="button"
               aria-label="Decrease quantity"
               onClick={() => run(() => updateQuantity(product._id, quantity - 1))}
               disabled={pending || quantity <= 1}
             >
-              −
+              <Minus size={14} />
             </button>
-            <span>{quantity}</span>
+            <span aria-live="polite">{quantity}</span>
             <button
               type="button"
               aria-label="Increase quantity"
               onClick={() => run(() => updateQuantity(product._id, quantity + 1))}
               disabled={pending || quantity >= product.stock}
             >
-              +
+              <Plus size={14} />
             </button>
           </div>
-          <button type="button" className="link-button" onClick={() => run(() => removeFromCart(product._id))} disabled={pending}>
-            {pending ? "Updating..." : "Remove"}
+          <button type="button" className="link link-danger small" onClick={() => run(() => removeFromCart(product._id))} disabled={pending}>
+            Remove
           </button>
         </div>
 
-        {overStock && (
-          <p className="field-error">
-            {product.stock === 0
-              ? "This product is now out of stock. Please remove it."
-              : `Only ${product.stock} left now - please reduce the quantity.`}
+        {!overStock && product.stock <= LOW_STOCK_FROM && product.stock > 0 && (
+          <p className="field-hint" style={{ marginTop: 8, color: "var(--saffron)" }}>
+            Few left, selling fast
           </p>
         )}
-        {error && <p className="field-error">{error}</p>}
+        {overStock && (
+          <p className="field-error" style={{ marginTop: 8 }}>
+            {product.stock === 0
+              ? "This product just sold out. Please remove it."
+              : "Not enough stock for this quantity now. Please reduce it."}
+          </p>
+        )}
+        {error && (
+          <p className="field-error" style={{ marginTop: 8 }}>
+            {error}
+          </p>
+        )}
       </div>
 
-      <div className="cart-item-total">{formatPrice(product.price * quantity)}</div>
+      <div className="line-total price">{formatPrice(product.price * quantity)}</div>
     </div>
   );
 }

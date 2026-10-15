@@ -16,6 +16,22 @@ const cartItemSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// Saved delivery address. Each one keeps its own _id so it can be edited or removed.
+const addressSchema = new mongoose.Schema(
+  {
+    label: { type: String, enum: ["Home", "Work", "Other"], default: "Home" },
+    fullName: { type: String, required: true, trim: true },
+    phone: { type: String, required: true, trim: true },
+    addressLine1: { type: String, required: true, trim: true },
+    addressLine2: { type: String, trim: true, default: "" },
+    city: { type: String, required: true, trim: true },
+    state: { type: String, required: true, trim: true },
+    pincode: { type: String, required: true, trim: true },
+    isDefault: { type: Boolean, default: false },
+  },
+  { timestamps: true }
+);
+
 const customerSchema = new mongoose.Schema(
   {
     fullName: {
@@ -40,6 +56,17 @@ const customerSchema = new mongoose.Schema(
       type: String,
       required: [true, "Phone number is required"],
       trim: true,
+    },
+    // Admins manage stock and orders from the admin panel
+    role: {
+      type: String,
+      enum: ["customer", "admin"],
+      default: "customer",
+    },
+    // Address book - one of them can be the default used at checkout
+    addresses: {
+      type: [addressSchema],
+      default: [],
     },
     // Lab 04: references only - the Product collection stays the source of truth
     wishlist: {

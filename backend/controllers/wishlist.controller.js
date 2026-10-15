@@ -2,7 +2,7 @@ import Customer from "../models/customer.model.js";
 import Product from "../models/product.model.js";
 import { isValidId } from "../utils/validators.js";
 
-const WISHLIST_FIELDS = "name price category image stock";
+const WISHLIST_FIELDS = "name price category image stock sold";
 
 // The user always comes from the auth middleware (req.user) - never from the request body or URL.
 const isInWishlist = (customer, productId) => customer.wishlist.some((id) => id.equals(productId));

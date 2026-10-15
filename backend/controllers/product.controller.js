@@ -1,12 +1,13 @@
 import Product from "../models/product.model.js";
 import { isValidId } from "../utils/validators.js";
 
-const LIST_FIELDS = "name price category image stock";
+const LIST_FIELDS = "name price category image stock sold";
 
 const SORT_OPTIONS = {
   price_asc: { price: 1 },
   price_desc: { price: -1 },
   newest: { createdAt: -1 },
+  popular: { sold: -1, createdAt: -1 },
 };
 
 // Escape regex special characters so a search like "c++" doesn't break the query

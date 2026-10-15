@@ -1,5 +1,7 @@
 const img = (id) => `https://images.unsplash.com/photo-${id}?w=800&q=80&auto=format&fit=crop`;
 
+// Every product started with 100 units. The bestsellers have already sold some,
+// so their stock is below 100 and `sold` records how many went out.
 const products = [
   // Electronics
   {
@@ -8,7 +10,8 @@ const products = [
     price: 3499,
     category: "Electronics",
     image: img("1505740420928-5e560c06d30e"),
-    stock: 25,
+    stock: 62,
+    sold: 38,
   },
   {
     name: "Smartphone 128GB",
@@ -16,7 +19,8 @@ const products = [
     price: 18999,
     category: "Electronics",
     image: img("1511707171634-5f897ff02aa9"),
-    stock: 12,
+    stock: 76,
+    sold: 24,
   },
   {
     name: "Slim Wireless Keyboard",
@@ -24,7 +28,8 @@ const products = [
     price: 2299,
     category: "Electronics",
     image: img("1587829741301-dc798b83add3"),
-    stock: 18,
+    stock: 100,
+    sold: 0,
   },
   {
     name: "Ergonomic Wireless Mouse",
@@ -32,7 +37,8 @@ const products = [
     price: 899,
     category: "Electronics",
     image: img("1527864550417-7fd91fc51a46"),
-    stock: 40,
+    stock: 83,
+    sold: 17,
   },
   {
     name: "Portable Bluetooth Speaker",
@@ -40,7 +46,8 @@ const products = [
     price: 2799,
     category: "Electronics",
     image: img("1608043152269-423dbba4e7e1"),
-    stock: 4,
+    stock: 100,
+    sold: 0,
   },
   {
     name: "Fitness Smartwatch",
@@ -48,7 +55,8 @@ const products = [
     price: 4999,
     category: "Electronics",
     image: img("1546868871-7041f2a55e12"),
-    stock: 9,
+    stock: 71,
+    sold: 29,
   },
   {
     name: "Instant Film Camera",
@@ -56,7 +64,8 @@ const products = [
     price: 6499,
     category: "Electronics",
     image: img("1526170375885-4d8ecf77b99f"),
-    stock: 0,
+    stock: 100,
+    sold: 0,
   },
 
   // Fashion
@@ -66,7 +75,8 @@ const products = [
     price: 2999,
     category: "Fashion",
     image: img("1542291026-7eec264c27ff"),
-    stock: 15,
+    stock: 79,
+    sold: 21,
   },
   {
     name: "Classic White T-Shirt",
@@ -74,7 +84,8 @@ const products = [
     price: 499,
     category: "Fashion",
     image: img("1521572163474-6864f9cf17ab"),
-    stock: 60,
+    stock: 54,
+    sold: 46,
   },
   {
     name: "Grey Pullover Hoodie",
@@ -82,7 +93,8 @@ const products = [
     price: 1299,
     category: "Fashion",
     image: img("1556821840-3a63f95609a7"),
-    stock: 22,
+    stock: 100,
+    sold: 0,
   },
   {
     name: "Black Wayfarer Sunglasses",
@@ -90,7 +102,8 @@ const products = [
     price: 799,
     category: "Fashion",
     image: img("1572635196237-14b3f281503f"),
-    stock: 30,
+    stock: 87,
+    sold: 13,
   },
   {
     name: "Navy Everyday Backpack",
@@ -98,7 +111,8 @@ const products = [
     price: 1599,
     category: "Fashion",
     image: img("1553062407-98eeb64c6a62"),
-    stock: 3,
+    stock: 100,
+    sold: 0,
   },
   {
     name: "Minimal Analog Watch",
@@ -106,7 +120,8 @@ const products = [
     price: 1899,
     category: "Fashion",
     image: img("1523275335684-37898b6baf30"),
-    stock: 14,
+    stock: 100,
+    sold: 0,
   },
 
   // Books
@@ -116,7 +131,8 @@ const products = [
     price: 299,
     category: "Books",
     image: img("1544947950-fa07a98d237f"),
-    stock: 35,
+    stock: 67,
+    sold: 33,
   },
   {
     name: "How Innovation Works",
@@ -124,7 +140,8 @@ const products = [
     price: 449,
     category: "Books",
     image: img("1589829085413-56de8ae18c73"),
-    stock: 20,
+    stock: 91,
+    sold: 9,
   },
   {
     name: "Startup Reading Bundle (5 Books)",
@@ -132,7 +149,8 @@ const products = [
     price: 1999,
     category: "Books",
     image: img("1512820790803-83ca734da794"),
-    stock: 7,
+    stock: 100,
+    sold: 0,
   },
   {
     name: "Short Stories Collection",
@@ -140,7 +158,8 @@ const products = [
     price: 349,
     category: "Books",
     image: img("1543002588-bfa74002ed7e"),
-    stock: 2,
+    stock: 100,
+    sold: 0,
   },
 
   // Home
@@ -150,7 +169,8 @@ const products = [
     price: 1199,
     category: "Home",
     image: img("1507473885765-e6ed057f782c"),
-    stock: 16,
+    stock: 89,
+    sold: 11,
   },
   {
     name: "White Ceramic Mug",
@@ -158,7 +178,8 @@ const products = [
     price: 249,
     category: "Home",
     image: img("1514228742587-6b1558fcca3d"),
-    stock: 50,
+    stock: 73,
+    sold: 27,
   },
   {
     name: "Wooden Bar Stool",
@@ -166,7 +187,8 @@ const products = [
     price: 2499,
     category: "Home",
     image: img("1503602642458-232111445657"),
-    stock: 6,
+    stock: 100,
+    sold: 0,
   },
 ];
 

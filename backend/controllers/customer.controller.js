@@ -13,6 +13,7 @@ const toPublicCustomer = (customer) => ({
   fullName: customer.fullName,
   email: customer.email,
   phone: customer.phone,
+  role: customer.role || "customer",
   createdAt: customer.createdAt,
 });
 

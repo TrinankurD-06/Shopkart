@@ -39,6 +39,12 @@ const productSchema = new mongoose.Schema(
         message: "Stock must be a whole number",
       },
     },
+    // Units sold so far - goes up when an order is paid, down if it is cancelled
+    sold: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   { timestamps: true }
 );

@@ -2,7 +2,7 @@ import Customer from "../models/customer.model.js";
 import Product from "../models/product.model.js";
 import { isValidId } from "../utils/validators.js";
 
-const CART_PRODUCT_FIELDS = "name price category image stock";
+const CART_PRODUCT_FIELDS = "name price category image stock sold";
 
 const findCartItem = (customer, productId) => customer.cart.find((item) => item.product.equals(productId));
 
@@ -25,7 +25,7 @@ const sendCart = async (res, customerId, message, status = 200) => {
 const stockMessage = (product) =>
   product.stock === 0
     ? `${product.name} is out of stock`
-    : `Only ${product.stock} unit(s) of ${product.name} available`;
+    : `You already have all the available units of ${product.name}`;
 
 // GET /cart
 export const getCart = async (req, res) => {

@@ -5,8 +5,6 @@ import Product from "../models/product.model.js";
 import getRazorpay from "../config/razorpay.js";
 import { isValidId, validateShippingAddress } from "../utils/validators.js";
 
-const STATUS_FLOW = ["PLACED", "CONFIRMED", "SHIPPED", "DELIVERED"];
-
 // Compare signatures in constant time to avoid timing attacks
 const signaturesMatch = (expected, received) => {
   const a = Buffer.from(expected, "utf8");
@@ -19,13 +17,14 @@ const markOrderPaid = async (order, userId, paymentId) => {
   order.status = "PLACED";
   order.razorpayPaymentId = paymentId;
   order.paidAt = new Date();
+  order.statusHistory.push({ status: "PLACED", at: order.paidAt });
   await order.save();
 
   await Product.bulkWrite(
     order.items.map((item) => ({
       updateOne: {
         filter: { _id: item.product, stock: { $gte: item.quantity } },
-        update: { $inc: { stock: -item.quantity } },
+        update: { $inc: { stock: -item.quantity, sold: item.quantity } },
       },
     }))
   );
@@ -63,7 +62,7 @@ export const createPaymentOrder = async (req, res) => {
     if (cartItem.quantity > product.stock) {
       return res.status(400).json({
         success: false,
-        message: `Insufficient stock for ${product.name}. Only ${product.stock} left.`,
+        message: `Not enough stock left for ${product.name}. Please reduce the quantity in your bag.`,
       });
     }
 
@@ -201,7 +200,7 @@ export const markPaymentFailed = async (req, res) => {
 // GET /orders  - only the current user's placed (paid) orders, newest first
 export const getMyOrders = async (req, res) => {
   const orders = await Order.find({ user: req.user._id, status: { $ne: "PENDING_PAYMENT" } })
-    .select("items totalAmount status paymentStatus createdAt")
+    .select("items totalAmount status paymentStatus statusHistory shippingAddress.city createdAt")
     .sort({ createdAt: -1 });
 
   res.json({ success: true, count: orders.length, orders });
@@ -222,40 +221,4 @@ export const getOrderById = async (req, res) => {
   }
 
   res.json({ success: true, order });
-};
-
-// PATCH /orders/:id/status  body: { status }  (bonus - development only)
-export const updateOrderStatus = async (req, res) => {
-  if (process.env.NODE_ENV === "production") {
-    return res.status(403).json({ success: false, message: "Status updates are disabled in production" });
-  }
-
-  const { id } = req.params;
-  const nextStatus = req.body?.status;
-
-  if (!isValidId(id)) {
-    return res.status(400).json({ success: false, message: "Invalid order ID" });
-  }
-
-  const order = await Order.findOne({ _id: id, user: req.user._id });
-  if (!order) {
-    return res.status(404).json({ success: false, message: "Order not found" });
-  }
-  if (order.paymentStatus !== "PAID") {
-    return res.status(400).json({ success: false, message: "Only paid orders can move forward" });
-  }
-
-  const currentIndex = STATUS_FLOW.indexOf(order.status);
-  const nextIndex = STATUS_FLOW.indexOf(nextStatus);
-  if (nextIndex === -1 || nextIndex <= currentIndex) {
-    return res.status(400).json({
-      success: false,
-      message: `Status must move forward from ${order.status} (allowed: ${STATUS_FLOW.slice(currentIndex + 1).join(", ") || "none"})`,
-    });
-  }
-
-  order.status = nextStatus;
-  await order.save();
-
-  res.json({ success: true, message: `Order marked as ${nextStatus}`, order });
 };

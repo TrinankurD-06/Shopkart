@@ -9,6 +9,7 @@ import productRoutes from "./routes/product.routes.js";
 import wishlistRoutes from "./routes/wishlist.routes.js";
 import cartRoutes from "./routes/cart.routes.js";
 import orderRoutes from "./routes/order.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
 import { notFound, errorHandler } from "./middlewares/error.middleware.js";
 
 if (!process.env.JWT_SECRET) {
@@ -49,6 +50,7 @@ api.use("/products", productRoutes);
 api.use("/wishlist", wishlistRoutes);
 api.use("/cart", cartRoutes);
 api.use("/orders", orderRoutes);
+api.use("/admin", adminRoutes);
 
 app.use("/api", api);
 

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { AlertTriangle, Heart } from "lucide-react";
 import WishlistCard from "../components/WishlistCard.jsx";
-import Loader from "../components/Loader.jsx";
+import ProductSkeleton from "../components/ProductSkeleton.jsx";
 import StateMessage from "../components/StateMessage.jsx";
 import { fetchWishlist, getErrorMessage, removeFromWishlist } from "../services/api.js";
+import { formatPrice } from "../utils/format.js";
 
 // Wishlist data lives in MongoDB and is fetched here - no global state needed (Lab 04)
 function Wishlist() {
@@ -39,13 +41,25 @@ function Wishlist() {
     }
   };
 
-  if (loading) return <Loader text="Loading your wishlist..." />;
+  if (loading) {
+    return (
+      <section>
+        <div className="page-head">
+          <div>
+            <p className="eyebrow">Saved for later</p>
+            <h1>Wishlist</h1>
+          </div>
+        </div>
+        <ProductSkeleton count={4} />
+      </section>
+    );
+  }
 
   if (error) {
     return (
-      <StateMessage icon="⚠️" tone="error" title="Something went wrong." text="We couldn't load your wishlist.">
+      <StateMessage icon={AlertTriangle} tone="error" title="We couldn't load your wishlist" text="Check your connection and try again.">
         <button type="button" className="btn btn-primary" onClick={loadWishlist}>
-          Try Again
+          Try again
         </button>
       </StateMessage>
     );
@@ -53,25 +67,28 @@ function Wishlist() {
 
   if (items.length === 0) {
     return (
-      <StateMessage icon="❤️" title="Your wishlist is empty" text="Save products you love and find them here later.">
+      <StateMessage icon={Heart} title="Nothing saved yet" text="Tap the heart on any product to keep it here for later.">
         <Link to="/products" className="btn btn-primary">
-          Browse Products
+          Browse the shop
         </Link>
       </StateMessage>
     );
   }
 
+  const total = items.reduce((sum, product) => sum + product.price, 0);
+
   return (
     <section>
       <div className="page-head">
         <div>
-          <h1>My Wishlist</h1>
+          <p className="eyebrow">Saved for later</p>
+          <h1>Wishlist</h1>
           <p className="muted">
-            {items.length} product{items.length === 1 ? "" : "s"} saved
+            {items.length} item{items.length === 1 ? "" : "s"} · worth <span className="mono">{formatPrice(total)}</span>
           </p>
         </div>
         <Link to="/products" className="btn btn-outline">
-          Continue Shopping
+          Keep browsing
         </Link>
       </div>
 

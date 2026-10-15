@@ -27,7 +27,7 @@ export const validateShipping = (form) => {
 
   // .trim() makes whitespace-only input count as empty
   for (const [field, label] of Object.entries(required)) {
-    if (!form[field].trim()) errors[field] = `${label} is required.`;
+    if (!String(form[field] || "").trim()) errors[field] = `${label} is required.`;
   }
   if (!errors.phone && !PHONE_REGEX.test(form.phone.trim())) {
     errors.phone = "Enter a valid 10-digit mobile number.";

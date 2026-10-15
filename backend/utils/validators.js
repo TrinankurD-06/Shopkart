@@ -6,6 +6,8 @@ export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const PHONE_REGEX = /^[6-9]\d{9}$/; // 10-digit Indian mobile number
 export const PINCODE_REGEX = /^[1-9]\d{5}$/; // 6-digit Indian pincode
 
+export const ADDRESS_LABELS = ["Home", "Work", "Other"];
+
 const asTrimmedString = (value) => (typeof value === "string" ? value.trim() : "");
 
 const SHIPPING_FIELDS = {
@@ -37,6 +39,11 @@ export const validateShippingAddress = (input) => {
   if (address.pincode && !PINCODE_REGEX.test(address.pincode)) {
     errors.push("Pincode must contain 6 digits");
   }
+
+  // Optional extras
+  address.addressLine2 = asTrimmedString(input.addressLine2);
+  const label = asTrimmedString(input.label);
+  address.label = ADDRESS_LABELS.includes(label) ? label : "Home";
 
   return { errors, address };
 };

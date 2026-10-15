@@ -1,39 +1,33 @@
-import { useState } from "react";
+import { ShoppingBag } from "lucide-react";
 import { useCart } from "../context/CartContext.jsx";
+import { useToast } from "../context/ToastContext.jsx";
 
-function AddToCartButton({ product, className = "" }) {
+// Large "Add to bag" on the product page
+function AddToCartButton({ product }) {
   const { addToCart, isPending, quantityOf } = useCart();
-  const [message, setMessage] = useState({ text: "", ok: true });
+  const toast = useToast();
 
   const pending = isPending(product._id);
   const inCart = quantityOf(product._id);
-  const outOfStock = product.stock === 0;
-  const reachedLimit = inCart >= product.stock;
+  const soldOut = product.stock === 0;
+  const atLimit = inCart >= product.stock;
 
   const handleAdd = async () => {
-    setMessage({ text: "", ok: true });
     const result = await addToCart(product._id);
-    setMessage({ text: result.ok ? "Added to cart" : result.message, ok: result.ok });
+    if (result.ok) toast({ text: `Added “${product.name}” to your bag`, action: { label: "View bag", to: "/cart" } });
+    else toast({ text: result.message, tone: "error" });
   };
 
-  let label = "Add to Cart";
-  if (outOfStock) label = "Out of Stock";
+  let label = inCart ? "Add one more" : "Add to bag";
+  if (soldOut) label = "Sold out";
   else if (pending) label = "Adding...";
-  else if (reachedLimit) label = "Max stock in cart";
-  else if (inCart) label = `Add Another (${inCart} in cart)`;
+  else if (atLimit) label = "Maximum already in your bag";
 
   return (
-    <div className="cart-action">
-      <button
-        type="button"
-        className={`btn btn-primary ${className}`}
-        onClick={handleAdd}
-        disabled={outOfStock || pending || reachedLimit}
-      >
-        {label}
-      </button>
-      {message.text && <p className={message.ok ? "field-success" : "field-error"}>{message.text}</p>}
-    </div>
+    <button type="button" className="btn btn-primary btn-lg" onClick={handleAdd} disabled={soldOut || pending || atLimit}>
+      {!soldOut && !atLimit && <ShoppingBag size={18} strokeWidth={1.8} />}
+      {label}
+    </button>
   );
 }
 

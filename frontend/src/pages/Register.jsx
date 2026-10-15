@@ -1,9 +1,22 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { AlertCircle } from "lucide-react";
 import { getErrorMessage, registerCustomer } from "../services/api.js";
 import { validateRegister } from "../utils/validation.js";
+import PasswordInput from "../components/PasswordInput.jsx";
+import AuthAside from "../components/AuthAside.jsx";
 
 const EMPTY_FORM = { fullName: "", email: "", password: "", phone: "" };
+
+// 0-3 rough strength score, purely a hint
+const strength = (password) => {
+  if (!password) return 0;
+  let score = password.length >= 6 ? 1 : 0;
+  if (password.length >= 10) score += 1;
+  if (/[A-Z]/.test(password) && /\d/.test(password)) score += 1;
+  return score;
+};
+const STRENGTH_LABEL = ["Too short", "Okay", "Good", "Strong"];
 
 function Register() {
   const navigate = useNavigate();
@@ -42,46 +55,67 @@ function Register() {
     }
   };
 
-  return (
-    <section className="auth-page">
-      <div className="auth-card">
-        <h1>Create your account</h1>
-        <p className="muted">Join ShopKart to save favourites, fill your cart and track orders.</p>
+  const score = strength(form.password);
 
-        {serverError && <div className="alert alert-error">{serverError}</div>}
+  return (
+    <section className="auth">
+      <AuthAside />
+      <div className="auth-main">
+        <p className="eyebrow">New account</p>
+        <h1>Create your account</h1>
+        <p className="muted">Save favourites, keep addresses handy and track every order.</p>
+
+        {serverError && (
+          <div className="alert alert-error">
+            <AlertCircle size={16} /> {serverError}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} noValidate>
-          <div className="form-field">
-            <label htmlFor="fullName">Full Name</label>
+          <div className="field">
+            <label htmlFor="fullName">Full name</label>
             <input id="fullName" name="fullName" value={form.fullName} onChange={handleChange} autoComplete="name" className={errors.fullName ? "has-error" : ""} />
             {errors.fullName && <p className="field-error">{errors.fullName}</p>}
           </div>
 
-          <div className="form-field">
-            <label htmlFor="email">Email</label>
-            <input id="email" name="email" type="email" value={form.email} onChange={handleChange} autoComplete="email" className={errors.email ? "has-error" : ""} />
-            {errors.email && <p className="field-error">{errors.email}</p>}
+          <div className="form-grid">
+            <div className="field">
+              <label htmlFor="email">Email</label>
+              <input id="email" name="email" type="email" value={form.email} onChange={handleChange} autoComplete="email" className={errors.email ? "has-error" : ""} />
+              {errors.email && <p className="field-error">{errors.email}</p>}
+            </div>
+
+            <div className="field">
+              <label htmlFor="phone">Mobile number</label>
+              <input id="phone" name="phone" inputMode="numeric" maxLength={10} value={form.phone} onChange={handleChange} autoComplete="tel" placeholder="10 digits, starts 6–9" className={errors.phone ? "has-error" : ""} />
+              {errors.phone && <p className="field-error">{errors.phone}</p>}
+            </div>
           </div>
 
-          <div className="form-field">
+          <div className="field">
             <label htmlFor="password">Password</label>
-            <input id="password" name="password" type="password" value={form.password} onChange={handleChange} autoComplete="new-password" className={errors.password ? "has-error" : ""} />
-            {errors.password ? <p className="field-error">{errors.password}</p> : <p className="hint">At least 6 characters.</p>}
+            <PasswordInput id="password" name="password" value={form.password} onChange={handleChange} autoComplete="new-password" className={errors.password ? "has-error" : ""} />
+            {errors.password ? (
+              <p className="field-error">{errors.password}</p>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div className="meter" style={{ flex: 1, height: 4 }}>
+                  <div className={`meter-fill ${score <= 1 ? "warn" : ""}`} style={{ width: `${(score / 3) * 100}%` }} />
+                </div>
+                <span className="field-hint" style={{ minWidth: 70, textAlign: "right" }}>
+                  {form.password ? STRENGTH_LABEL[score] : "6+ characters"}
+                </span>
+              </div>
+            )}
           </div>
 
-          <div className="form-field">
-            <label htmlFor="phone">Phone Number</label>
-            <input id="phone" name="phone" inputMode="numeric" maxLength={10} value={form.phone} onChange={handleChange} autoComplete="tel" className={errors.phone ? "has-error" : ""} />
-            {errors.phone && <p className="field-error">{errors.phone}</p>}
-          </div>
-
-          <button type="submit" className="btn btn-primary btn-block" disabled={submitting}>
-            {submitting ? "Creating account..." : "Create Account"}
+          <button type="submit" className="btn btn-primary btn-block btn-lg" disabled={submitting}>
+            {submitting ? "Creating account..." : "Create account"}
           </button>
         </form>
 
         <p className="auth-switch">
-          Already have an account? <Link to="/login">Log in</Link>
+          Already shopping with us? <Link to="/login">Log in</Link>
         </p>
       </div>
     </section>

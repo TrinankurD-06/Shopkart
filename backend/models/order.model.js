@@ -32,9 +32,11 @@ const orderSchema = new mongoose.Schema(
       },
     },
     shippingAddress: {
+      label: { type: String },
       fullName: { type: String, required: true },
       phone: { type: String, required: true },
       addressLine1: { type: String, required: true },
+      addressLine2: { type: String },
       city: { type: String, required: true },
       state: { type: String, required: true },
       pincode: { type: String, required: true },
@@ -50,8 +52,19 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["PENDING_PAYMENT", "PLACED", "CONFIRMED", "SHIPPED", "DELIVERED"],
+      enum: ["PENDING_PAYMENT", "PLACED", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"],
       default: "PENDING_PAYMENT",
+    },
+    // When each status was reached - drives the dates on the order tracker
+    statusHistory: {
+      type: [
+        {
+          _id: false,
+          status: { type: String, required: true },
+          at: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
     },
     razorpayOrderId: String,
     razorpayPaymentId: String,

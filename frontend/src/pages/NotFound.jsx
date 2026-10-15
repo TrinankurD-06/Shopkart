@@ -1,11 +1,12 @@
 import { Link } from "react-router-dom";
+import { Compass } from "lucide-react";
 import StateMessage from "../components/StateMessage.jsx";
 
 function NotFound() {
   return (
-    <StateMessage icon="🧭" title="Page not found" text="The page you are looking for doesn't exist.">
+    <StateMessage icon={Compass} title="This page wandered off" text="The page you are looking for doesn't exist or has moved.">
       <Link to="/home" className="btn btn-primary">
-        Go Home
+        Back to the shop
       </Link>
     </StateMessage>
   );

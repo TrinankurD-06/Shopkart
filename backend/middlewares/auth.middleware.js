@@ -29,4 +29,12 @@ const protect = async (req, res, next) => {
   next();
 };
 
+// Use after protect: only accounts with role "admin" get through
+export const adminOnly = (req, res, next) => {
+  if (req.user?.role !== "admin") {
+    return res.status(403).json({ success: false, message: "Admin access only" });
+  }
+  next();
+};
+
 export default protect;

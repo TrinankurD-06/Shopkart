@@ -38,6 +38,13 @@ export const getMe = () => data(api.get("/customers/me"));
 export const logoutCustomer = () => data(api.post("/customers/logout"));
 export const changePassword = (passwords) => data(api.patch("/customers/change-password", passwords));
 
+// ---------- Address book ----------
+export const fetchAddresses = () => data(api.get("/customers/addresses"));
+export const createAddress = (address) => data(api.post("/customers/addresses", address));
+export const editAddress = (id, address) => data(api.patch(`/customers/addresses/${id}`, address));
+export const makeDefaultAddress = (id) => data(api.patch(`/customers/addresses/${id}/default`));
+export const deleteAddress = (id) => data(api.delete(`/customers/addresses/${id}`));
+
 // ---------- Products ----------
 export const fetchProducts = (params) => data(api.get("/products", { params }));
 export const fetchCategories = () => data(api.get("/products/categories"));
@@ -63,6 +70,13 @@ export const verifyPayment = (payload) => data(api.post("/orders/verify-payment"
 export const reportPaymentFailure = (orderId) => data(api.post(`/orders/${orderId}/payment-failed`));
 export const fetchOrders = () => data(api.get("/orders"));
 export const fetchOrder = (id) => data(api.get(`/orders/${id}`));
-export const advanceOrderStatus = (id, status) => data(api.patch(`/orders/${id}/status`, { status }));
+
+// ---------- Admin ----------
+export const fetchAnalytics = (days) => data(api.get("/admin/analytics", { params: { days } }));
+export const fetchInventory = (params) => data(api.get("/admin/products", { params }));
+export const updateStock = (id, stock) => data(api.patch(`/admin/products/${id}/stock`, { stock }));
+export const fetchAdminOrders = (params) => data(api.get("/admin/orders", { params }));
+export const fetchAdminOrder = (id) => data(api.get(`/admin/orders/${id}`));
+export const updateAdminOrderStatus = (id, status) => data(api.patch(`/admin/orders/${id}/status`, { status }));
 
 export default api;
