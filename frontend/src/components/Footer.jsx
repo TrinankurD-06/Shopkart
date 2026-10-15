@@ -42,6 +42,9 @@ function Footer() {
           <h4>Good to know</h4>
           <ul>
             <li>Free delivery, 3–5 days</li>
+            <li>
+              <Link to="/returns">Returns & refunds</Link>
+            </li>
             <li>Payments by Razorpay</li>
             <li>Test Mode: nothing is charged</li>
           </ul>

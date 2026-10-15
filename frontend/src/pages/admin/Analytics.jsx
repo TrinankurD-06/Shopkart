@@ -15,7 +15,7 @@ import {
 } from "../../utils/format.js";
 
 const RANGES = [7, 14, 30, 90];
-const STATUS_ORDER = ["PLACED", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"];
+const STATUS_ORDER = ["PLACED", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED", "RETURNED"];
 
 // Round an axis maximum up to 1 / 2 / 5 × 10^n
 const niceMax = (value) => {
@@ -227,7 +227,7 @@ function Analytics() {
           <div className="panel-head">
             <div>
               <h2 className="panel-title">Revenue</h2>
-              <p className="panel-sub">Paid, non-cancelled orders per day · last {periodLabel}</p>
+              <p className="panel-sub">Paid orders per day, excluding cancelled and returned · last {periodLabel}</p>
             </div>
             <button type="button" className="link table-toggle" onClick={() => setShowTable((value) => !value)}>
               {showTable ? "Show chart" : "View as table"}
@@ -271,6 +271,44 @@ function Analytics() {
               <dd className="mono">{formatNumber(summary.unitsSold)}</dd>
             </div>
           </dl>
+        </div>
+      </div>
+
+      <div className="panel after-sales-strip">
+        <div className="panel-head" style={{ marginBottom: 14 }}>
+          <div>
+            <h2 className="panel-title">After-sales</h2>
+            <p className="panel-sub">Cancellations, returns and refunds</p>
+          </div>
+          <Link to="/admin/returns" className="link small">
+            Open returns desk
+          </Link>
+        </div>
+        <div className="mini-stats">
+          <Link to="/admin/returns?view=refunds">
+            <span>Refunded, all time</span>
+            <strong>{formatPrice(Math.round(data.afterSales.refunded))}</strong>
+            <small>{data.afterSales.refundedCount} refunds</small>
+          </Link>
+          <Link to="/admin/returns">
+            <span>Returns to handle</span>
+            <strong>{data.afterSales.returnsPending}</strong>
+            <small>requested or awaiting pickup</small>
+          </Link>
+          <Link to="/admin/orders?status=CANCELLED">
+            <span>Cancelled · last {periodLabel}</span>
+            <strong>{data.afterSales.cancelledInPeriod}</strong>
+            <small>
+              {data.afterSales.returnRequestsInPeriod} return request{data.afterSales.returnRequestsInPeriod === 1 ? "" : "s"} · {data.afterSales.returnedInPeriod} returned
+            </small>
+          </Link>
+          <Link to="/admin/returns?view=refunds" className={data.afterSales.refundsFailed ? "warn" : ""}>
+            <span>Refund problems</span>
+            <strong>{data.afterSales.refundsFailed + data.afterSales.refundsPending}</strong>
+            <small>
+              {data.afterSales.refundsFailed} failed · {data.afterSales.refundsPending} pending
+            </small>
+          </Link>
         </div>
       </div>
 
@@ -362,8 +400,8 @@ function Analytics() {
       </div>
 
       <p className="field-hint" style={{ marginTop: 8 }}>
-        Revenue counts real paid orders. "Units sold" also includes each product's opening sales history from the
-        seed data.
+        Revenue counts real paid orders, minus cancelled and returned ones (both are refunded). "Units sold" also includes each product's
+        opening sales history from the seed data.
       </p>
     </section>
   );

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { BarChart3, Boxes, ExternalLink, LogOut, Menu, PackageOpen, X } from "lucide-react";
+import { BarChart3, Boxes, ExternalLink, LogOut, Menu, PackageOpen, RotateCcw, X } from "lucide-react";
 import Brand from "../../components/Brand.jsx";
 import Avatar from "../../components/Avatar.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { fetchAdminOrders, fetchInventory } from "../../services/api.js";
+import { fetchAdminOrders, fetchInventory, fetchReturns } from "../../services/api.js";
 
 // Separate shell for /admin: dark sidebar, no store navbar
 function AdminLayout() {
@@ -12,12 +12,24 @@ function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
-  const [badges, setBadges] = useState({ toConfirm: 0, lowStock: 0 });
+  const [badges, setBadges] = useState({ toConfirm: 0, lowStock: 0, returns: 0 });
 
-  // Sidebar counters: paid orders waiting to be confirmed, products running low
+  // Sidebar counters: orders waiting to be confirmed, products running low,
+  // returns waiting for a decision plus refunds that failed
   const refreshBadges = useCallback(() => {
-    Promise.all([fetchAdminOrders({ status: "PLACED" }), fetchInventory({ level: "low" }), fetchInventory({ level: "out" })])
-      .then(([placed, low, out]) => setBadges({ toConfirm: placed.count, lowStock: low.count + out.count }))
+    Promise.all([
+      fetchAdminOrders({ status: "PLACED" }),
+      fetchInventory({ level: "low" }),
+      fetchInventory({ level: "out" }),
+      fetchReturns("requested"),
+    ])
+      .then(([placed, low, out, returns]) =>
+        setBadges({
+          toConfirm: placed.count,
+          lowStock: low.count + out.count,
+          returns: returns.counts.requested + (returns.refunds.FAILED?.count || 0),
+        })
+      )
       .catch(() => {});
   }, []);
 
@@ -59,6 +71,10 @@ function AdminLayout() {
           <NavLink to="/admin/orders">
             <PackageOpen size={17} /> Orders
             {badges.toConfirm > 0 && <span className="num" title="Placed orders waiting to be confirmed">{badges.toConfirm}</span>}
+          </NavLink>
+          <NavLink to="/admin/returns">
+            <RotateCcw size={17} /> Returns & refunds
+            {badges.returns > 0 && <span className="num" title="Return requests to review and failed refunds">{badges.returns}</span>}
           </NavLink>
           <NavLink to="/admin/inventory">
             <Boxes size={17} /> Inventory

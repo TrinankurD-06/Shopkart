@@ -18,6 +18,8 @@ import Orders from "./pages/Orders.jsx";
 import OrderDetails from "./pages/OrderDetails.jsx";
 import Account from "./pages/Account.jsx";
 import NotFound from "./pages/NotFound.jsx";
+import ReturnsPolicy from "./pages/ReturnsPolicy.jsx";
+import AdminReturns from "./pages/admin/AdminReturns.jsx";
 import AdminLayout from "./pages/admin/AdminLayout.jsx";
 import Analytics from "./pages/admin/Analytics.jsx";
 import AdminOrders from "./pages/admin/AdminOrders.jsx";
@@ -58,11 +60,13 @@ function App() {
             <Route index element={<Analytics />} />
             <Route path="orders" element={<AdminOrders />} />
             <Route path="inventory" element={<Inventory />} />
+            <Route path="returns" element={<AdminReturns />} />
           </Route>
         </Route>
 
         <Route element={<StoreLayout />}>
           <Route path="/" element={<Navigate to="/home" replace />} />
+          <Route path="/returns" element={<ReturnsPolicy />} />
 
           <Route element={<GuestRoute />}>
             <Route path="/login" element={<Login />} />

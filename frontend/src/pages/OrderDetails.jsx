@@ -5,10 +5,12 @@ import Loader from "../components/Loader.jsx";
 import StateMessage from "../components/StateMessage.jsx";
 import OrderTimeline from "../components/OrderProgress.jsx";
 import AddressText, { AddressLabel } from "../components/AddressText.jsx";
+import { AfterSalesStatus, OrderHelp } from "../components/OrderAfterSales.jsx";
 import { fetchOrder, getErrorMessage } from "../services/api.js";
-import { formatDateTime, formatPrice, handleImageError, shortId, statusLabel } from "../utils/format.js";
+import { REFUND_LABELS, RETURN_LABELS, formatDateTime, formatPrice, handleImageError, shortId, statusLabel } from "../utils/format.js";
 
-// Customers can only follow their order here - status changes happen in the admin panel
+// Customers follow their order here, and can cancel (before shipping) or return it (after delivery).
+// Fulfilment status changes happen in the admin panel.
 function OrderDetails() {
   const { id } = useParams();
   const [order, setOrder] = useState(null);
@@ -53,7 +55,13 @@ function OrderDetails() {
           <h1>{order.status === "CANCELLED" ? "This order was cancelled" : `${statusLabel(order.status)}`}</h1>
           <p className="muted">Placed {formatDateTime(order.paidAt || order.createdAt)}</p>
         </div>
-        <span className={`pill pill-${order.status.toLowerCase()}`}>{statusLabel(order.status)}</span>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <span className={`pill pill-${order.status.toLowerCase()}`}>{statusLabel(order.status)}</span>
+          {order.returnRequest && order.status !== "RETURNED" && (
+            <span className={`pill pill-return-${order.returnRequest.status.toLowerCase()}`}>{RETURN_LABELS[order.returnRequest.status]}</span>
+          )}
+          {order.refund && <span className={`pill pill-refund-${order.refund.status.toLowerCase()}`}>{REFUND_LABELS[order.refund.status]}</span>}
+        </div>
       </div>
 
       {!isPaid && (
@@ -72,6 +80,9 @@ function OrderDetails() {
               <OrderTimeline order={order} />
             </div>
           )}
+
+          {isPaid && <OrderHelp order={order} onUpdated={setOrder} />}
+          <AfterSalesStatus order={order} />
 
           <div className="panel">
             <h2 className="panel-title" style={{ marginBottom: 18 }}>

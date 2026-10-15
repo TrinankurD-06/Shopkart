@@ -83,6 +83,31 @@ export const STATUS_LABELS = {
   SHIPPED: "Shipped",
   DELIVERED: "Delivered",
   CANCELLED: "Cancelled",
+  RETURNED: "Returned",
+};
+
+export const RETURN_LABELS = {
+  REQUESTED: "Return requested",
+  APPROVED: "Return approved",
+  REJECTED: "Return declined",
+  RECEIVED: "Return received",
+};
+
+// What the customer sees; the admin sees the raw status
+export const REFUND_LABELS = {
+  PENDING: "Refund processing",
+  PROCESSED: "Refunded",
+  FAILED: "Refund on hold",
+};
+
+// Events recorded after the main fulfilment steps
+export const EVENT_LABELS = {
+  RETURN_REQUESTED: "Return requested",
+  RETURN_WITHDRAWN: "Return request withdrawn",
+  RETURN_APPROVED: "Return approved — pickup arranged",
+  RETURN_REJECTED: "Return declined",
+  RETURNED: "Return received at warehouse",
+  REFUNDED: "Refund processed",
 };
 
 export const statusLabel = (status) => STATUS_LABELS[status] || status;

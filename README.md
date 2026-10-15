@@ -11,8 +11,8 @@ A full-stack MERN e-commerce app built for Engineering Labs 01–06 ([problem st
 
 > The admin details are listed only here, not anywhere in the app. Log in with them on the normal login page. Admins land on the admin panel. Their store header shows only **Home** and **Admin**, with no bag, wishlist or orders, because admins don't shop.
 
-**Customer flow:** Register → Login → Browse / Search / Filter → Wishlist → Bag → Choose or add an address → Razorpay (Test Mode) → Receipt → Order tracking.
-**Admin flow:** Analytics → Orders (Confirm → Ship → Deliver, or Cancel) → Inventory (restock).
+**Customer flow:** Register → Login → Browse / Search / Filter → Wishlist → Bag → Choose or add an address → Razorpay (Test Mode) → Receipt → Order tracking → Cancel or return → Refund.
+**Admin flow:** Analytics → Orders (Confirm → Ship → Deliver, or Cancel) → Returns & refunds (approve, receive, refund) → Inventory (restock).
 
 | Layer    | Tech |
 |----------|------|
@@ -45,6 +45,7 @@ A full-stack MERN e-commerce app built for Engineering Labs 01–06 ([problem st
 6. **Bag → Checkout:** pick a saved address or add a new one inline. Then click **Pay ₹…**.
 7. **Pay with Netbanking (easiest; see below).**
 8. You land on a **receipt**, the bag count drops to **0**, and the order appears under **Orders** with a tracking timeline.
+9. **Cancel or return:** open the order. While it is Placed or Confirmed, **Cancel order** asks for a reason, cancels it straight away and starts a Razorpay refund. After the admin marks it delivered, **Return order** opens a return request (7-day window), which you can withdraw until it's reviewed. The order page shows the return and refund status, including the Razorpay refund ID. The policy is at **/returns**.
 
 ### As the admin
 
@@ -56,9 +57,13 @@ A full-stack MERN e-commerce app built for Engineering Labs 01–06 ([problem st
 3. **Orders:** every paid order, with status tabs and a search box.
    - The **Next step** button moves an order forward: **Confirm → Mark shipped → Mark delivered**.
    - Click a row to open the order details, its timeline, and **Cancel order**. Cancelling is allowed while an order is Placed or Confirmed, and it puts the stock back.
-4. **Inventory:** the stock list for all 20 products, with units sold and a stock meter.
+4. **Returns & refunds:**
+   - **Requests:** approve a return (pickup arranged) or decline it with a note for the customer.
+   - **Awaiting pickup:** **Mark received** puts the items back in stock and issues the Razorpay refund.
+   - **Refunds:** every refund with its status. Failed refunds can be retried, and pending ones re-checked with Razorpay.
+5. **Inventory:** the stock list for all 20 products, with units sold and a stock meter.
    - Type a new number and click **Save**, or use **+10**, **+50** or **Refill** (back to 100).
-5. Log back in as your customer and open the order. The **timeline shows the new status with dates**.
+6. Log back in as your customer and open the order. The **timeline shows every status, return and refund event with dates**.
 
 ### 💳 Paying in Test Mode: use **Netbanking**
 
@@ -77,6 +82,11 @@ Other test methods also work. The UPI ID `success@razorpay` succeeds and `failur
 - **Stock starts at 100 for every product.** The bestsellers have seeded sales history: for example, the Classic White T-Shirt has sold 46 and has 54 left. That makes the catalogue look like it has been ordered from before.
   - Each paid order reduces `stock` and increases `sold`. Cancelling an order reverses both.
   - The analytics page says so too: **revenue comes only from real paid orders**, but **"units sold" includes the seeded history**.
+- **Cancellations, returns and refunds:**
+  - Customers can cancel only before shipping (Placed or Confirmed). They can request a return only within **7 days of delivery**, and only once per order. Both rules are enforced on the server.
+  - Cancelling (by the customer or the admin) and receiving a return both put the stock back and issue a **full refund through Razorpay's refund API**: real Test Mode refunds, so no money moves.
+  - If Razorpay rejects a refund, the order keeps a **Failed** refund with the reason, and the admin can retry it. The customer sees "Refund on hold".
+  - Revenue on the analytics page excludes cancelled and returned orders.
 - **Only the admin can change an order's status.** Customers can only follow their orders. The old customer-side "Simulate next step" button and its `PATCH /api/orders/:id/status` endpoint have been removed.
 - **Admin routes are protected on the server**, not just hidden in the UI. Every `/api/admin/*` call checks for `role: "admin"` and returns 403 otherwise.
 - **The admin credentials are public placeholders** so evaluators can try the panel. For a real store, set `ADMIN_EMAIL` and `ADMIN_PASSWORD` and re-run `npm run seed:admin`.
@@ -121,7 +131,12 @@ Other test methods also work. The UPI ID `success@razorpay` succeeds and `failur
   - saved-address cards with an inline "add new address" form
   - optional "save to my address book"
   - item thumbnails in the summary
-- Receipt with a "PAID" stamp, plus an order history with filters and a dated tracking timeline (including cancelled orders).
+- Receipt with a "PAID" stamp, plus an order history with filters and a dated tracking timeline (including cancellations, returns and refunds).
+- **Cancel, return, refund:**
+  - cancel before shipping with a reason, refunded automatically
+  - return within 7 days of delivery (with a reason and optional note), withdraw while pending
+  - refund status and Razorpay refund ID on the order page
+  - a public Returns & refunds policy page
 - Toast notifications, navbar badges that bump when they change, password visibility toggle, password strength hint.
 
 **Admin panel** (`/admin`, separate layout)
@@ -138,7 +153,12 @@ Other test methods also work. The UPI ID `success@razorpay` succeeds and `failur
   - units, stock value, low-stock and sold-out tiles
   - category and level filters
   - inline stock editing with +10, +50 and Refill shortcuts
-- The sidebar badges show orders waiting for confirmation and products running low.
+- **Returns & refunds:**
+  - after-sales tiles: waiting for review, awaiting pickup, refunded amount, refunds needing attention
+  - tabs for Requests, Awaiting pickup, Returned, Declined and Refunds
+  - quick Approve, Mark received and Retry buttons, plus the order drawer with approve, decline (note) and receive & refund
+- **Analytics:** an after-sales strip with refunded total, returns to handle, cancellations and returns in the period, and refund problems.
+- The sidebar badges show orders waiting for confirmation, returns to review (plus failed refunds) and products running low.
 
 ---
 
@@ -247,7 +267,7 @@ backend/
 │                    product.model.js (+ sold), order.model.js (+ statusHistory)
 ├── routes/          auth, customer, product, wishlist, cart, order, admin  (all under /api)
 ├── seed/            products.js, seed.js (seed / fresh / sync-stock), admin.js
-├── utils/           generateToken.js, validators.js
+├── utils/           generateToken.js, validators.js, orderActions.js (cancel / restock / refund)
 └── index.js         Express app (exported for Vercel, listens locally)
 
 frontend/src/
@@ -256,8 +276,8 @@ frontend/src/
 │                    ProtectedRoute, AdminRoute, GuestRoute, ProductSkeleton, ...
 ├── context/         AuthContext, CartContext, AddressContext, ToastContext
 ├── pages/           Home, Products, ProductDetails, Wishlist, Cart, Checkout, OrderSuccess,
-│                    Orders, OrderDetails, Account, Login, Register, NotFound
-│   └── admin/       AdminLayout, Analytics, AdminOrders, Inventory
+│                    Orders, OrderDetails, ReturnsPolicy, Account, Login, Register, NotFound
+│   └── admin/       AdminLayout, Analytics, AdminOrders, AdminReturns, Inventory
 ├── services/        api.js (all API calls, axios withCredentials)
 └── utils/           format.js, validation.js, razorpay.js, location.js
 ```
@@ -334,7 +354,11 @@ frontend/src/
 | POST | `/api/orders/verify-payment` | `{shopKartOrderId, razorpay_order_id, razorpay_payment_id, razorpay_signature}`. Checks the HMAC-SHA256 signature against the **stored** Razorpay order id. Then it marks the order PAID/PLACED, records the status history, reduces `stock`, increases `sold` and clears the cart. |
 | POST | `/api/orders/:id/payment-failed` | Marks a failed attempt (the cart is kept) |
 | GET | `/api/orders` | Current user's placed orders, newest first (unpaid attempts are hidden) |
-| GET | `/api/orders/:id` | 404 if the order belongs to someone else |
+| GET | `/api/orders/:id` | 404 if the order belongs to someone else. Includes `actions`: `canCancel`, `canReturn`, `canWithdrawReturn`, `returnBy`. |
+| GET | `/api/orders/reasons` | The cancel and return reasons, and the return window in days |
+| POST | `/api/orders/:id/cancel` | `{reason}` (one of the listed reasons). Only while PLACED or CONFIRMED. Restocks and refunds through Razorpay. |
+| POST | `/api/orders/:id/return` | `{reason, comment?}`. Only for DELIVERED orders, within 7 days, once per order. 409 if already requested. |
+| DELETE | `/api/orders/:id/return` | Withdraw a return request that hasn't been reviewed yet |
 
 ### Admin, all 🔒🛡️ (403 for non-admins)
 | Method | Endpoint | Notes |
@@ -342,7 +366,10 @@ frontend/src/
 | GET | `/api/admin/analytics?days=7\|14\|30\|90` | Summary with change vs the previous period, daily revenue, status counts, top products, category sales, low stock, recent orders |
 | GET | `/api/admin/orders?status=&search=` | All paid orders with the customer populated, plus counts per status |
 | GET | `/api/admin/orders/:id` | Full order with customer details |
-| PATCH | `/api/admin/orders/:id/status` | `{status}`. Forward only: PLACED → CONFIRMED → SHIPPED → DELIVERED. Skipping ahead records the steps in between. `CANCELLED` is allowed from PLACED or CONFIRMED and returns the items to stock. |
+| PATCH | `/api/admin/orders/:id/status` | `{status, reason?}`. Forward only: PLACED → CONFIRMED → SHIPPED → DELIVERED. Skipping ahead records the steps in between. `CANCELLED` is allowed from PLACED or CONFIRMED; it returns the items to stock and refunds the payment. |
+| PATCH | `/api/admin/orders/:id/return` | `{action, note?}`. `approve` and `reject` (a note is required) work on a REQUESTED return. `receive` works on an APPROVED one: the order becomes RETURNED, the stock goes back and the refund is issued. |
+| POST | `/api/admin/orders/:id/refund` | Retry a FAILED refund, or re-check a PENDING one with Razorpay |
+| GET | `/api/admin/returns?view=requested\|approved\|returned\|rejected\|refunds` | After-sales list, with counts per view and refund totals by status |
 | GET | `/api/admin/products?search=&category=&level=low\|out` | Stock list with `stock` and `sold` |
 | PATCH | `/api/admin/products/:id/stock` | `{stock}`. A whole number from 0 to 100,000. |
 

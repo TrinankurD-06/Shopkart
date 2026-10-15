@@ -7,6 +7,9 @@ import {
   getOrderForAdmin,
   updateOrderStatus,
   getAnalytics,
+  reviewReturn,
+  retryRefund,
+  getReturns,
 } from "../controllers/admin.controller.js";
 
 const router = Router();
@@ -22,5 +25,9 @@ router.patch("/products/:id/stock", updateStock);
 router.get("/orders", getAllOrders);
 router.get("/orders/:id", getOrderForAdmin);
 router.patch("/orders/:id/status", updateOrderStatus);
+router.patch("/orders/:id/return", reviewReturn);
+router.post("/orders/:id/refund", retryRefund);
+
+router.get("/returns", getReturns);
 
 export default router;

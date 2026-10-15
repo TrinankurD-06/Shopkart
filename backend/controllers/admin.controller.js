@@ -2,9 +2,10 @@ import Customer from "../models/customer.model.js";
 import Order from "../models/order.model.js";
 import Product from "../models/product.model.js";
 import { isValidId } from "../utils/validators.js";
+import { CANCELLABLE_STATUSES, addHistory, cancelOrder, refundOrder, restock, syncRefund } from "../utils/orderActions.js";
 
 const STATUS_FLOW = ["PLACED", "CONFIRMED", "SHIPPED", "DELIVERED"];
-const CANCELLABLE = ["PLACED", "CONFIRMED"];
+const ADMIN_ORDER_USER_FIELDS = "fullName email phone createdAt";
 const MAX_STOCK = 100000;
 const TIMEZONE = "Asia/Kolkata";
 
@@ -65,7 +66,7 @@ export const getAllOrders = async (req, res) => {
 
   // Unpaid checkout attempts never became orders, so they are left out
   const filter = { paymentStatus: "PAID" };
-  if ([...STATUS_FLOW, "CANCELLED"].includes(status)) filter.status = status;
+  if ([...STATUS_FLOW, "CANCELLED", "RETURNED"].includes(status)) filter.status = status;
 
   if (search) {
     const pattern = { $regex: escapeRegex(search), $options: "i" };
@@ -81,7 +82,7 @@ export const getAllOrders = async (req, res) => {
 
   const orders = await Order.find(filter)
     .populate("user", "fullName email")
-    .select("user items totalAmount status paymentStatus shippingAddress.city shippingAddress.state paidAt createdAt")
+    .select("user items totalAmount status paymentStatus shippingAddress.city shippingAddress.state returnRequest.status refund.status paidAt createdAt")
     .sort({ createdAt: -1 })
     .limit(200);
 
@@ -105,7 +106,7 @@ export const getOrderForAdmin = async (req, res) => {
     return res.status(400).json({ success: false, message: "Invalid order ID" });
   }
 
-  const order = await Order.findById(id).populate("user", "fullName email phone createdAt");
+  const order = await Order.findById(id).populate("user", ADMIN_ORDER_USER_FIELDS);
   if (!order) {
     return res.status(404).json({ success: false, message: "Order not found" });
   }
@@ -113,64 +114,167 @@ export const getOrderForAdmin = async (req, res) => {
   res.json({ success: true, order });
 };
 
-// PATCH /admin/orders/:id/status  body: { status }
+const loadOrder = async (req, res) => {
+  if (!isValidId(req.params.id)) {
+    res.status(400).json({ success: false, message: "Invalid order ID" });
+    return null;
+  }
+  const order = await Order.findById(req.params.id);
+  if (!order) res.status(404).json({ success: false, message: "Order not found" });
+  return order;
+};
+
+const sendOrder = async (res, order, message) => {
+  await order.populate("user", ADMIN_ORDER_USER_FIELDS);
+  res.json({ success: true, message, order });
+};
+
+// PATCH /admin/orders/:id/status  body: { status, reason? }
 // Orders move forward one way (PLACED -> CONFIRMED -> SHIPPED -> DELIVERED).
-// PLACED or CONFIRMED orders can be CANCELLED, which puts the stock back.
+// PLACED or CONFIRMED orders can be CANCELLED: stock goes back and the payment is refunded.
 export const updateOrderStatus = async (req, res) => {
-  const { id } = req.params;
   const nextStatus = typeof req.body?.status === "string" ? req.body.status.toUpperCase() : "";
+  const order = await loadOrder(req, res);
+  if (!order) return;
 
-  if (!isValidId(id)) {
-    return res.status(400).json({ success: false, message: "Invalid order ID" });
-  }
-
-  const order = await Order.findById(id);
-  if (!order) {
-    return res.status(404).json({ success: false, message: "Order not found" });
-  }
   if (order.paymentStatus !== "PAID") {
     return res.status(400).json({ success: false, message: "Only paid orders can be updated" });
   }
 
   if (nextStatus === "CANCELLED") {
-    if (!CANCELLABLE.includes(order.status)) {
+    if (!CANCELLABLE_STATUSES.includes(order.status)) {
       return res.status(400).json({
         success: false,
         message: `A ${order.status.toLowerCase()} order can no longer be cancelled`,
       });
     }
-
-    await Product.bulkWrite(
-      order.items.map((item) => ({
-        updateOne: {
-          filter: { _id: item.product },
-          update: { $inc: { stock: item.quantity, sold: -item.quantity } },
-        },
-      }))
-    );
-  } else {
-    const currentIndex = STATUS_FLOW.indexOf(order.status);
-    const nextIndex = STATUS_FLOW.indexOf(nextStatus);
-    if (currentIndex === -1 || nextIndex === -1 || nextIndex <= currentIndex) {
-      const allowed = currentIndex === -1 ? [] : STATUS_FLOW.slice(currentIndex + 1);
-      return res.status(400).json({
-        success: false,
-        message: `Status must move forward from ${order.status} (allowed: ${allowed.join(", ") || "none"})`,
-      });
-    }
-
-    // Skipping ahead (e.g. PLACED -> SHIPPED) still records every step in between
-    for (const step of STATUS_FLOW.slice(currentIndex + 1, nextIndex)) {
-      order.statusHistory.push({ status: step, at: new Date() });
-    }
+    const reason =
+      typeof req.body?.reason === "string" && req.body.reason.trim() ? req.body.reason.trim().slice(0, 200) : "Cancelled by the store";
+    await cancelOrder(order, { by: "admin", reason });
+    const refundNote = order.refund.status === "FAILED" ? " The refund failed - retry it from the order." : " Refund started.";
+    return sendOrder(res, order, `Order cancelled.${refundNote}`);
   }
 
-  order.status = nextStatus;
-  order.statusHistory.push({ status: nextStatus, at: new Date() });
-  await order.save();
-  await order.populate("user", "fullName email phone createdAt");
+  const currentIndex = STATUS_FLOW.indexOf(order.status);
+  const nextIndex = STATUS_FLOW.indexOf(nextStatus);
+  if (currentIndex === -1 || nextIndex === -1 || nextIndex <= currentIndex) {
+    const allowed = currentIndex === -1 ? [] : STATUS_FLOW.slice(currentIndex + 1);
+    return res.status(400).json({
+      success: false,
+      message: `Status must move forward from ${order.status} (allowed: ${allowed.join(", ") || "none"})`,
+    });
+  }
 
-  res.json({ success: true, message: `Order marked as ${nextStatus.toLowerCase()}`, order });
+  // Skipping ahead (e.g. PLACED -> SHIPPED) still records every step in between
+  for (const step of STATUS_FLOW.slice(currentIndex + 1, nextIndex + 1)) addHistory(order, step);
+  order.status = nextStatus;
+  await order.save();
+
+  sendOrder(res, order, `Order marked as ${nextStatus.toLowerCase()}`);
+};
+
+// PATCH /admin/orders/:id/return  body: { action: "approve" | "reject" | "receive", note? }
+//   approve: REQUESTED -> APPROVED (arrange the pickup)
+//   reject:  REQUESTED -> REJECTED (a note for the customer is required)
+//   receive: APPROVED  -> RECEIVED (order becomes RETURNED, stock goes back, refund issued)
+export const reviewReturn = async (req, res) => {
+  const action = req.body?.action;
+  const note = typeof req.body?.note === "string" ? req.body.note.trim().slice(0, 300) : "";
+  const order = await loadOrder(req, res);
+  if (!order) return;
+
+  const current = order.returnRequest?.status;
+  if (!current) return res.status(400).json({ success: false, message: "This order has no return request" });
+
+  if (action === "approve" || action === "reject") {
+    if (current !== "REQUESTED") {
+      return res.status(400).json({ success: false, message: `This return was already ${current.toLowerCase()}` });
+    }
+    if (action === "reject" && !note) {
+      return res.status(400).json({ success: false, message: "Add a short note telling the customer why" });
+    }
+    order.returnRequest.status = action === "approve" ? "APPROVED" : "REJECTED";
+    order.returnRequest.decidedAt = new Date();
+    if (note) order.returnRequest.adminNote = note;
+    addHistory(order, action === "approve" ? "RETURN_APPROVED" : "RETURN_REJECTED");
+    await order.save();
+    return sendOrder(res, order, action === "approve" ? "Return approved - arrange the pickup" : "Return rejected");
+  }
+
+  if (action === "receive") {
+    if (current !== "APPROVED") {
+      return res.status(400).json({ success: false, message: "Approve the return before marking it received" });
+    }
+    order.returnRequest.status = "RECEIVED";
+    order.returnRequest.receivedAt = new Date();
+    if (note) order.returnRequest.adminNote = note;
+    order.status = "RETURNED";
+    addHistory(order, "RETURNED");
+    await restock(order);
+    await refundOrder(order, "return");
+    await order.save();
+    const refundNote = order.refund.status === "FAILED" ? " The refund failed - retry it." : " Refund started.";
+    return sendOrder(res, order, `Return received, items back in stock.${refundNote}`);
+  }
+
+  res.status(400).json({ success: false, message: 'Action must be "approve", "reject" or "receive"' });
+};
+
+// POST /admin/orders/:id/refund - retry a failed refund, or re-check a pending one with Razorpay
+export const retryRefund = async (req, res) => {
+  const order = await loadOrder(req, res);
+  if (!order) return;
+
+  const status = order.refund?.status;
+  if (status === "FAILED") {
+    await refundOrder(order, order.refund.reason);
+  } else if (status === "PENDING") {
+    try {
+      await syncRefund(order);
+    } catch (error) {
+      return res.status(502).json({ success: false, message: `Razorpay: ${error?.error?.description || error.message}` });
+    }
+  } else {
+    return res.status(400).json({ success: false, message: status ? "This refund is already processed" : "This order has no refund" });
+  }
+
+  await order.save();
+  sendOrder(res, order, `Refund ${order.refund.status.toLowerCase()}`);
+};
+
+// GET /admin/returns?view=requested|approved|returned|rejected|refunds
+// Everything that needs after-sales attention, plus counts for the tabs
+const RETURN_VIEWS = {
+  requested: { "returnRequest.status": "REQUESTED" },
+  approved: { "returnRequest.status": "APPROVED" },
+  returned: { "returnRequest.status": "RECEIVED" },
+  rejected: { "returnRequest.status": "REJECTED" },
+  refunds: { refund: { $exists: true } },
+};
+
+export const getReturns = async (req, res) => {
+  const view = RETURN_VIEWS[req.query.view] ? req.query.view : "requested";
+
+  const [orders, counts, refundTotals] = await Promise.all([
+    Order.find(RETURN_VIEWS[view])
+      .populate("user", "fullName email")
+      .select("user items totalAmount status returnRequest refund cancellation shippingAddress.city paidAt createdAt updatedAt")
+      .sort({ updatedAt: -1 })
+      .limit(200),
+    Promise.all(Object.entries(RETURN_VIEWS).map(async ([key, filter]) => [key, await Order.countDocuments(filter)])),
+    Order.aggregate([
+      { $match: { refund: { $exists: true } } },
+      { $group: { _id: "$refund.status", amount: { $sum: "$refund.amount" }, count: { $sum: 1 } } },
+    ]),
+  ]);
+
+  res.json({
+    success: true,
+    view,
+    orders,
+    counts: Object.fromEntries(counts),
+    refunds: Object.fromEntries(refundTotals.map((row) => [row._id, { amount: row.amount, count: row.count }])),
+  });
 };
 
 // ---------- Analytics ----------
@@ -185,8 +289,8 @@ export const getAnalytics = async (req, res) => {
   const periodStart = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
   const previousStart = new Date(periodStart.getTime() - days * 24 * 60 * 60 * 1000);
 
-  // Revenue counts every paid order that was not cancelled
-  const earning = { paymentStatus: "PAID", status: { $ne: "CANCELLED" } };
+  // Revenue counts every paid order that was not cancelled or returned (both are refunded)
+  const earning = { paymentStatus: "PAID", status: { $nin: ["CANCELLED", "RETURNED"] } };
 
   const sumBetween = async (from, to) => {
     const [row] = await Order.aggregate([
@@ -209,6 +313,8 @@ export const getAnalytics = async (req, res) => {
     topProducts,
     lowStock,
     recentOrders,
+    refundRows,
+    afterSalesRows,
   ] = await Promise.all([
     sumBetween(periodStart, now),
     sumBetween(previousStart, periodStart),
@@ -257,7 +363,23 @@ export const getAnalytics = async (req, res) => {
       .select("user totalAmount status items.quantity paidAt createdAt")
       .sort({ createdAt: -1 })
       .limit(6),
+    // Refunds by status, all time
+    Order.aggregate([
+      { $match: { refund: { $exists: true } } },
+      { $group: { _id: "$refund.status", amount: { $sum: "$refund.amount" }, count: { $sum: 1 } } },
+    ]),
+    // Cancellations and returns in this period (by when they happened)
+    Order.aggregate([
+      { $match: { paymentStatus: "PAID" } },
+      { $unwind: "$statusHistory" },
+      { $match: { "statusHistory.status": { $in: ["CANCELLED", "RETURN_REQUESTED", "RETURNED"] }, "statusHistory.at": { $gte: periodStart } } },
+      { $group: { _id: "$statusHistory.status", count: { $sum: 1 } } },
+    ]),
   ]);
+
+  const refunds = Object.fromEntries(refundRows.map((row) => [row._id, { amount: row.amount, count: row.count }]));
+  const afterSales = Object.fromEntries(afterSalesRows.map((row) => [row._id, row.count]));
+  const returnsPending = await Order.countDocuments({ "returnRequest.status": { $in: ["REQUESTED", "APPROVED"] } });
 
   // One entry per day, including days with no sales
   const byDay = new Map(dailyRows.map((row) => [row._id, row]));
@@ -286,6 +408,16 @@ export const getAnalytics = async (req, res) => {
       unitsSold: stockTotals.sold,
       unitsInStock: stockTotals.units,
       inventoryValue: stockTotals.value,
+    },
+    afterSales: {
+      refunded: refunds.PROCESSED?.amount || 0,
+      refundedCount: refunds.PROCESSED?.count || 0,
+      refundsPending: refunds.PENDING?.count || 0,
+      refundsFailed: refunds.FAILED?.count || 0,
+      returnsPending,
+      cancelledInPeriod: afterSales.CANCELLED || 0,
+      returnRequestsInPeriod: afterSales.RETURN_REQUESTED || 0,
+      returnedInPeriod: afterSales.RETURNED || 0,
     },
     daily,
     statusCounts: Object.fromEntries(statusRows.map((row) => [row._id, row.count])),

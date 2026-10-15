@@ -17,6 +17,45 @@ const orderItemSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// Why and by whom an order was cancelled
+const cancellationSchema = new mongoose.Schema(
+  {
+    by: { type: String, enum: ["customer", "admin"], required: true },
+    reason: { type: String, trim: true },
+    at: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
+// A customer's return request and the store's decision on it
+const returnRequestSchema = new mongoose.Schema(
+  {
+    status: { type: String, enum: ["REQUESTED", "APPROVED", "REJECTED", "RECEIVED"], default: "REQUESTED" },
+    reason: { type: String, trim: true, required: true },
+    comment: { type: String, trim: true },
+    requestedAt: { type: Date, default: Date.now },
+    decidedAt: Date,
+    adminNote: { type: String, trim: true },
+    receivedAt: Date,
+  },
+  { _id: false }
+);
+
+// Money going back to the customer through Razorpay
+const refundSchema = new mongoose.Schema(
+  {
+    status: { type: String, enum: ["PENDING", "PROCESSED", "FAILED"], default: "PENDING" },
+    reason: { type: String, enum: ["cancellation", "return"], required: true },
+    amount: { type: Number, required: true },
+    razorpayRefundId: String,
+    error: String,
+    attempts: { type: Number, default: 0 },
+    initiatedAt: Date,
+    processedAt: Date,
+  },
+  { _id: false }
+);
+
 const orderSchema = new mongoose.Schema(
   {
     user: {
@@ -52,9 +91,12 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["PENDING_PAYMENT", "PLACED", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"],
+      enum: ["PENDING_PAYMENT", "PLACED", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED", "RETURNED"],
       default: "PENDING_PAYMENT",
     },
+    cancellation: cancellationSchema,
+    returnRequest: returnRequestSchema,
+    refund: refundSchema,
     // When each status was reached - drives the dates on the order tracker
     statusHistory: {
       type: [

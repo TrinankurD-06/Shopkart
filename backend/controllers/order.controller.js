@@ -4,6 +4,15 @@ import Order from "../models/order.model.js";
 import Product from "../models/product.model.js";
 import getRazorpay from "../config/razorpay.js";
 import { isValidId, validateShippingAddress } from "../utils/validators.js";
+import {
+  CANCEL_REASONS,
+  CANCELLABLE_STATUSES,
+  RETURN_REASONS,
+  RETURN_WINDOW_DAYS,
+  addHistory,
+  cancelOrder,
+  returnDeadline,
+} from "../utils/orderActions.js";
 
 // Compare signatures in constant time to avoid timing attacks
 const signaturesMatch = (expected, received) => {
@@ -200,7 +209,7 @@ export const markPaymentFailed = async (req, res) => {
 // GET /orders  - only the current user's placed (paid) orders, newest first
 export const getMyOrders = async (req, res) => {
   const orders = await Order.find({ user: req.user._id, status: { $ne: "PENDING_PAYMENT" } })
-    .select("items totalAmount status paymentStatus statusHistory shippingAddress.city createdAt")
+    .select("items totalAmount status paymentStatus statusHistory shippingAddress.city returnRequest.status refund.status createdAt")
     .sort({ createdAt: -1 });
 
   res.json({ success: true, count: orders.length, orders });
@@ -220,5 +229,105 @@ export const getOrderById = async (req, res) => {
     return res.status(404).json({ success: false, message: "Order not found" });
   }
 
-  res.json({ success: true, order });
+  res.json({ success: true, order: withActions(order) });
+};
+
+// What the customer may do next with this order - the UI shows buttons from this
+const withActions = (order) => {
+  const deadline = returnDeadline(order);
+  const paid = order.paymentStatus === "PAID";
+  return {
+    ...order.toObject(),
+    actions: {
+      canCancel: paid && CANCELLABLE_STATUSES.includes(order.status),
+      canReturn: paid && order.status === "DELIVERED" && !order.returnRequest && deadline > new Date(),
+      canWithdrawReturn: order.returnRequest?.status === "REQUESTED",
+      returnBy: order.status === "DELIVERED" ? deadline : null,
+      returnWindowDays: RETURN_WINDOW_DAYS,
+    },
+  };
+};
+
+const pickReason = (value, allowed) => (typeof value === "string" && allowed.includes(value.trim()) ? value.trim() : "");
+const cleanComment = (value) => (typeof value === "string" ? value.trim().slice(0, 500) : "");
+
+const findOwnOrder = async (req, res) => {
+  if (!isValidId(req.params.id)) {
+    res.status(400).json({ success: false, message: "Invalid order ID" });
+    return null;
+  }
+  const order = await Order.findOne({ _id: req.params.id, user: req.user._id });
+  if (!order) res.status(404).json({ success: false, message: "Order not found" });
+  return order;
+};
+
+// GET /orders/reasons - the choices shown in the cancel and return forms
+export const getReasons = (req, res) => {
+  res.json({ success: true, cancel: CANCEL_REASONS, return: RETURN_REASONS, returnWindowDays: RETURN_WINDOW_DAYS });
+};
+
+// POST /orders/:id/cancel  body: { reason }
+// Customers can cancel until the order ships. Stock goes back and the payment is refunded.
+export const cancelMyOrder = async (req, res) => {
+  const order = await findOwnOrder(req, res);
+  if (!order) return;
+
+  if (order.paymentStatus !== "PAID" || !CANCELLABLE_STATUSES.includes(order.status)) {
+    const why = order.status === "SHIPPED" || order.status === "DELIVERED" ? " It has already shipped - you can return it after delivery instead." : "";
+    return res.status(400).json({ success: false, message: `This order can no longer be cancelled.${why}` });
+  }
+
+  const reason = pickReason(req.body?.reason, CANCEL_REASONS);
+  if (!reason) return res.status(400).json({ success: false, message: "Please choose a reason for cancelling" });
+
+  await cancelOrder(order, { by: "customer", reason });
+
+  const refundNote =
+    order.refund.status === "FAILED"
+      ? "We couldn't start the refund automatically - our team will process it shortly."
+      : "Your refund has been started.";
+  res.json({ success: true, message: `Order cancelled. ${refundNote}`, order: withActions(order) });
+};
+
+// POST /orders/:id/return  body: { reason, comment? }
+// Within the return window after delivery. The store then approves or rejects it.
+export const requestReturn = async (req, res) => {
+  const order = await findOwnOrder(req, res);
+  if (!order) return;
+
+  if (order.status !== "DELIVERED") {
+    return res.status(400).json({ success: false, message: "Only delivered orders can be returned" });
+  }
+  if (order.returnRequest) {
+    return res.status(409).json({ success: false, message: "A return has already been requested for this order" });
+  }
+  const deadline = returnDeadline(order);
+  if (!deadline || deadline <= new Date()) {
+    return res.status(400).json({ success: false, message: `The ${RETURN_WINDOW_DAYS}-day return window for this order has closed` });
+  }
+
+  const reason = pickReason(req.body?.reason, RETURN_REASONS);
+  if (!reason) return res.status(400).json({ success: false, message: "Please choose a reason for the return" });
+
+  order.returnRequest = { status: "REQUESTED", reason, comment: cleanComment(req.body?.comment), requestedAt: new Date() };
+  addHistory(order, "RETURN_REQUESTED");
+  await order.save();
+
+  res.status(201).json({ success: true, message: "Return requested. We'll review it within 1–2 days.", order: withActions(order) });
+};
+
+// DELETE /orders/:id/return - withdraw a request the store hasn't reviewed yet
+export const withdrawReturn = async (req, res) => {
+  const order = await findOwnOrder(req, res);
+  if (!order) return;
+
+  if (order.returnRequest?.status !== "REQUESTED") {
+    return res.status(400).json({ success: false, message: "There is no pending return request to withdraw" });
+  }
+
+  order.returnRequest = undefined;
+  addHistory(order, "RETURN_WITHDRAWN");
+  await order.save();
+
+  res.json({ success: true, message: "Return request withdrawn", order: withActions(order) });
 };

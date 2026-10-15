@@ -74,12 +74,21 @@ export const reportPaymentFailure = (orderId) => data(api.post(`/orders/${orderI
 export const fetchOrders = () => data(api.get("/orders"));
 export const fetchOrder = (id) => data(api.get(`/orders/${id}`));
 
+// ---------- Cancel / return ----------
+export const fetchOrderReasons = () => data(api.get("/orders/reasons"));
+export const cancelMyOrder = (id, reason) => data(api.post(`/orders/${id}/cancel`, { reason }));
+export const requestReturn = (id, payload) => data(api.post(`/orders/${id}/return`, payload));
+export const withdrawReturn = (id) => data(api.delete(`/orders/${id}/return`));
+
 // ---------- Admin ----------
 export const fetchAnalytics = (days) => data(api.get("/admin/analytics", { params: { days } }));
 export const fetchInventory = (params) => data(api.get("/admin/products", { params }));
 export const updateStock = (id, stock) => data(api.patch(`/admin/products/${id}/stock`, { stock }));
 export const fetchAdminOrders = (params) => data(api.get("/admin/orders", { params }));
 export const fetchAdminOrder = (id) => data(api.get(`/admin/orders/${id}`));
-export const updateAdminOrderStatus = (id, status) => data(api.patch(`/admin/orders/${id}/status`, { status }));
+export const updateAdminOrderStatus = (id, status, reason) => data(api.patch(`/admin/orders/${id}/status`, { status, reason }));
+export const reviewReturn = (id, action, note) => data(api.patch(`/admin/orders/${id}/return`, { action, note }));
+export const retryRefund = (id) => data(api.post(`/admin/orders/${id}/refund`));
+export const fetchReturns = (view) => data(api.get("/admin/returns", { params: { view } }));
 
 export default api;

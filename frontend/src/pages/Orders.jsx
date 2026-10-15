@@ -5,18 +5,20 @@ import Loader from "../components/Loader.jsx";
 import StateMessage from "../components/StateMessage.jsx";
 import { ProgressLine } from "../components/OrderProgress.jsx";
 import { fetchOrders } from "../services/api.js";
-import { formatDate, formatPrice, handleImageError, shortId, statusLabel } from "../utils/format.js";
+import { REFUND_LABELS, RETURN_LABELS, formatDate, formatPrice, handleImageError, shortId, statusLabel } from "../utils/format.js";
 
 const FILTERS = [
   { value: "all", label: "All" },
   { value: "active", label: "In progress" },
   { value: "DELIVERED", label: "Delivered" },
   { value: "CANCELLED", label: "Cancelled" },
+  { value: "returns", label: "Returns & refunds" },
 ];
 
 const matches = (order, filter) => {
   if (filter === "all") return true;
   if (filter === "active") return ["PLACED", "CONFIRMED", "SHIPPED"].includes(order.status);
+  if (filter === "returns") return order.status === "RETURNED" || Boolean(order.returnRequest || order.refund);
   return order.status === filter;
 };
 
@@ -40,6 +42,10 @@ function OrderRow({ order }) {
         <div className="top">
           <strong className="mono">{shortId(order._id)}</strong>
           <span className={`pill pill-${order.status.toLowerCase()}`}>{statusLabel(order.status)}</span>
+          {order.returnRequest && order.status !== "RETURNED" && (
+            <span className={`pill pill-return-${order.returnRequest.status.toLowerCase()}`}>{RETURN_LABELS[order.returnRequest.status]}</span>
+          )}
+          {order.refund && <span className={`pill pill-refund-${order.refund.status.toLowerCase()}`}>{REFUND_LABELS[order.refund.status]}</span>}
         </div>
         <div className="items">{order.items.map((item) => item.name).join(", ")}</div>
         <ProgressLine status={order.status} />
@@ -101,7 +107,8 @@ function Orders() {
   }
 
   const visible = orders.filter((order) => matches(order, filter));
-  const spent = orders.filter((order) => order.status !== "CANCELLED").reduce((sum, order) => sum + order.totalAmount, 0);
+  // Cancelled and returned orders are refunded, so they don't count as spent
+  const spent = orders.filter((order) => !["CANCELLED", "RETURNED"].includes(order.status)).reduce((sum, order) => sum + order.totalAmount, 0);
 
   return (
     <section>
