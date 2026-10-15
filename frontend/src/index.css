@@ -2896,24 +2896,6 @@ fieldset {
   object-fit: cover;
 }
 
-.demo-note {
-  margin-top: 26px;
-  padding: 14px 16px;
-  border: 1px dashed var(--line-strong);
-  border-radius: var(--r);
-  font-size: 0.82rem;
-  color: var(--ink-2);
-  background: var(--paper);
-}
-
-.demo-note strong {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--ink);
-  margin-bottom: 4px;
-}
-
 /* ---------- Account ---------- */
 
 .account-grid {

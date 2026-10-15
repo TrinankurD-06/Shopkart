@@ -9,7 +9,7 @@ A full-stack MERN e-commerce app built for Engineering Labs 01–06 ([problem st
 | **Admin** (placeholder) | `admin@shopkart.dev` | `Admin@123` | Analytics, all orders, update order status, inventory and stock |
 | **Customer** | Register your own, or **Continue with Google** | 6+ characters | Shop, save addresses, pay in Test Mode, track orders |
 
-> The login page has a **"Fill in"** button for the admin account. Admins land on the admin panel. Their store header shows only **Home** and **Admin**, with no bag, wishlist or orders, because admins don't shop.
+> The admin details are listed only here, not anywhere in the app. Log in with them on the normal login page. Admins land on the admin panel. Their store header shows only **Home** and **Admin**, with no bag, wishlist or orders, because admins don't shop.
 
 **Customer flow:** Register → Login → Browse / Search / Filter → Wishlist → Bag → Choose or add an address → Razorpay (Test Mode) → Receipt → Order tracking.
 **Admin flow:** Analytics → Orders (Confirm → Ship → Deliver, or Cancel) → Inventory (restock).

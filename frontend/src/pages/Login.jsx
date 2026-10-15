@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { AlertCircle, CheckCircle2, KeyRound } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { getErrorMessage, loginCustomer } from "../services/api.js";
 import PasswordInput from "../components/PasswordInput.jsx";
@@ -16,9 +16,6 @@ const OAUTH_ERRORS = {
   google_failed: "We couldn't reach Google just now. Please try again.",
   not_configured: "Google sign-in isn't set up on this server yet.",
 };
-
-// Placeholder admin created by `npm run seed:admin` - also listed in the README
-const DEMO_ADMIN = { email: "admin@shopkart.dev", password: "Admin@123" };
 
 function Login() {
   const navigate = useNavigate();
@@ -98,17 +95,6 @@ function Login() {
         <p className="auth-switch">
           New here? <Link to="/register">Create an account</Link>
         </p>
-
-        <div className="demo-note">
-          <strong>
-            <KeyRound size={14} /> Reviewing the project?
-          </strong>
-          Sign in as the store admin to see analytics, orders and stock:{" "}
-          <span className="mono">{DEMO_ADMIN.email}</span> / <span className="mono">{DEMO_ADMIN.password}</span>{" "}
-          <button type="button" className="link small" onClick={() => setForm(DEMO_ADMIN)}>
-            Fill in
-          </button>
-        </div>
       </div>
     </section>
   );
